@@ -1,7 +1,9 @@
 citHeader(
   paste(
     "NSCA estimates necessity with the NCA engine and sufficiency with SCAtools.",
-    "Please cite NSCA, the two packages it delegates to, and the underlying NCA method."
+    "Please cite NSCA, the two packages it delegates to, the papers that set out",
+    "sufficient and necessary-and-sufficient condition analysis, and the",
+    "underlying NCA method."
   )
 )
 
@@ -17,10 +19,26 @@ bibentry(
 
 bibentry(
   bibtype = "Manual",
-  title   = "SCAtools: Direction-Aware Sufficiency Condition Analysis",
+  title   = "SCAtools: Direction-Aware Sufficient Condition Analysis",
   author  = person("Young", "Chan"),
   year    = "2026",
   note    = "R package"
+)
+
+bibentry(
+  bibtype      = "Misc",
+  title        = "From Necessity to Sufficiency and Necessity-and-Sufficiency: Extending Condition Analysis in Degree",
+  author       = person("Young", "Chan"),
+  year         = "in press",
+  howpublished = "University of Leeds"
+)
+
+bibentry(
+  bibtype      = "Misc",
+  title        = "Mean Effects Are Not Sufficiency Effects: How Sufficient Condition Analysis Complements Regression Analysis",
+  author       = person("Young", "Chan"),
+  year         = "in press",
+  howpublished = "University of Leeds"
 )
 
 bibentry(

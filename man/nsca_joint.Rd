@@ -10,12 +10,12 @@ nsca_joint(d_nec, d_suf, p = 0, normalize = TRUE)
 \item{d_nec, d_suf}{Necessity and sufficiency effect sizes. Vectors are
 recycled to a common length.}
 
-\item{p}{Degree of the power mean; the degree of compensation. Defaults to
-\code{0}, the geometric mean.}
+\item{p}{Degree of the power mean, which sets the degree of compensation.
+Defaults to \code{0}, the geometric mean.}
 
-\item{normalize}{Multiply by two so that the index spans \verb{[0, 1]}. The
-guarantee rests on \verb{M_p <= (d_nec + d_suf)/2 <= 0.5} and therefore holds
-only for \code{p <= 1}.}
+\item{normalize}{Whether to multiply by two so that the index spans
+\verb{[0, 1]}. This bound relies on \verb{M_p <= (d_nec + d_suf)/2 <= 0.5} and
+therefore holds only for \code{p <= 1}.}
 }
 \value{
 A numeric vector, \code{NA} where either component is missing or
@@ -29,43 +29,45 @@ compensate for the weaker one.
 \details{
 The index is the power mean
 \eqn{M_p = ((d_{nec}^p + d_{suf}^p)/2)^{1/p}}, optionally doubled so that it
-spans \verb{[0, 1]}. The parameter \code{p} is the degree of compensation:
+spans \verb{[0, 1]}. The parameter \code{p} sets the degree of compensation:
 
 \describe{
-\item{\code{p = -Inf}}{\code{min(d_nec, d_suf)}. Fully non-compensatory: no amount
-of strength on one side raises the index if the other side is weak. This
-is the \code{weakest_effect} column of \code{\link[=nsca_table]{nsca_table()}}, reported there
-unnormalised so that it stays on the components' own scale.}
+\item{\code{p = -Inf}}{\code{min(d_nec, d_suf)}. Fully non-compensatory: the index
+follows the weaker component only, so additional strength on the other
+side does not raise it. This is the \code{weakest_effect} column of
+\code{\link[=nsca_table]{nsca_table()}}, reported there unnormalized so that it stays on the
+components' own scale.}
 \item{\code{p = -1}}{The harmonic mean. Less compensatory than the geometric
-mean, still zero as soon as either component is zero.}
-\item{\code{p = 0}}{The geometric mean. \strong{Partially} compensatory: a larger
-component does raise the index, but at a diminishing rate, and the index
-still collapses to zero if either component does. This is the
+mean, and zero whenever either component is zero.}
+\item{\code{p = 0}}{The geometric mean. Partially compensatory: a larger
+component raises the index, but at a diminishing rate, and the index is
+zero whenever either component is zero. This is the
 \code{balanced_joint_effect} column of \code{\link[=nsca_table]{nsca_table()}}.}
 \item{\code{p = 1}}{The arithmetic mean, that is, half the sum. Fully
-compensatory: one strong component alone can carry the index, so a
-necessary-only relation scores as highly as a necessary-and-sufficient
-one. This is
-why the sum is a poor conjunction summary, but it is the same family, not
-a different kind of quantity.}
+compensatory: one strong component alone can produce a high index, so a
+necessary-only relation can score as highly as a
+necessary-and-sufficient one. For this reason the sum is less suited to
+summarizing a conjunction, although it belongs to the same family rather
+than being a different kind of quantity.}
 }
 
-The geometric mean is the middle course, and describing it as a
-non-compensatory "AND" would overstate it. What it does is penalise
+The geometric mean is an intermediate choice, and describing it as a
+non-compensatory "AND" would overstate its properties. It penalizes
 asymmetry: at an equal sum of 0.80, \verb{(0.40, 0.40)} gives 0.80 and
 \verb{(0.70, 0.10)} gives 0.529.
 
 No magnitude benchmarks are supplied. Conventions for a single NCA effect
-size do not transfer, because this index has a different scale and a
+size do not carry over, because this index has a different scale and a
 different null: under independence both components carry a positive
 finite-sample bias that a product of the two amplifies rather than cancels,
-and its size depends on \code{n}, the frontier technique and the scope. Calibrate
-by simulation on the design at hand before attaching words to values.
+and its size depends on \code{n}, the frontier technique and the scope. We
+suggest calibrating by simulation on the design at hand before attaching
+verbal labels to values.
 }
 \examples{
 nsca_joint(0.40, 0.40)              # balanced
-nsca_joint(0.70, 0.10)              # same sum, penalised for asymmetry
-nsca_joint(0.40, 0.40, p = -Inf)    # the minimum, normalised
+nsca_joint(0.70, 0.10)              # same sum, penalized for asymmetry
+nsca_joint(0.40, 0.40, p = -Inf)    # the minimum, normalized
 nsca_joint(0.40, 0.40, p = -Inf, normalize = FALSE)   # weakest_effect
 }
 \seealso{

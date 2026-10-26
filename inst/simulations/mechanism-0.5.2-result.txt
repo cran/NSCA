@@ -1,0 +1,3 @@
+only necessity, n = 30             d_suf 0.083  null 0.054  critical 0.117  reject suf 0.220  reject nec 0.940  corner cases 2.98 observed vs 4.13 shuffled
+unrelated uniform, n = 30          d_suf 0.074  null 0.075  critical 0.162  reject suf 0.049  reject nec 0.043  corner cases 2.78 observed vs 2.73 shuffled
+correlated normal r = .5, n = 60   d_suf 0.257  null 0.128  critical 0.210  reject suf 0.810  reject nec 0.840  corner cases 4.72 observed vs 8.78 shuffled

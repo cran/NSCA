@@ -17,6 +17,11 @@ way are listed by \code{\link[=nsca_legacy_names]{nsca_legacy_names()}}.
 \examples{
 nsca_terms()
 }
+\references{
+Chan, Y. (in press). \emph{From Necessity to Sufficiency and
+Necessity-and-Sufficiency: Extending Condition Analysis in Degree}.
+University of Leeds.
+}
 \seealso{
 \code{\link[=nsca_legacy_names]{nsca_legacy_names()}}, \code{\link[=nsca_direction_map]{nsca_direction_map()}}, \code{\link[=nsca_table]{nsca_table()}}
 }

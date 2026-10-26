@@ -4,61 +4,78 @@
 \alias{nsca_table}
 \title{Joint necessity and sufficiency results}
 \usage{
-nsca_table(model, legacy = FALSE)
+nsca_table(model, legacy = FALSE, p.adjust = "none")
 }
 \arguments{
 \item{model}{An object returned by \code{\link[=nsca_analysis]{nsca_analysis()}}.}
 
-\item{legacy}{Append the column names retired in 0.3.0 and 0.4.0 as
-duplicates. See \code{\link[=nsca_legacy_names]{nsca_legacy_names()}}.}
+\item{legacy}{Whether to append the column names retired in 0.3.0, 0.4.0
+and 0.5.x as duplicates. See \code{\link[=nsca_legacy_names]{nsca_legacy_names()}}.}
+
+\item{p.adjust}{Multiple-testing correction applied across the conditions
+within each frontier technique, as a method name understood by
+\code{\link[stats:p.adjust]{stats::p.adjust()}}. \code{"none"}, the default, leaves the table unchanged.
+
+Any other method adjusts each component family separately and rebuilds
+the joint p-value from the adjusted pair, so \code{p_nsca_iut_adjusted} is
+\code{max(p_nec_adjusted, p_suf_adjusted)} rather than
+\code{p.adjust(p_nsca_iut)}. These are different numbers, and only the first
+agrees with the component columns printed beside it. Every significance
+and support column is then re-derived; the relevance half of
+\code{necessity_supported} and \code{sufficiency_supported} is unchanged, since an
+effect size does not change when more tests are run. The \verb{*_critical}
+columns are not adjusted; see the section on multiple testing.}
 }
 \value{
 A data frame of joint results.
 }
 \description{
-One row per condition and frontier technique. Both sides of a row always use
-the same technique, the same observations and the same scope.
+One row per condition and frontier technique. Both sides of a row use the
+same technique, the same observations and the same scope.
 }
 \section{What is primary}{
 
-The component effect sizes \code{d_nec} and \code{d_suf} are primary. Everything else
-is a way of putting them together, and three such ways are reported rather
-than one, because nothing in the geometry of two empty zones selects one.
+The component effect sizes \code{d_nec} and \code{d_suf} are primary. The remaining
+indices combine them, and three such combinations are reported rather than
+one, because the geometry of two empty zones does not single out any one
+of them.
 
 \describe{
 \item{\code{weakest_effect}}{\code{min(d_nec, d_suf)}, the fully non-compensatory
-summary. It falls to zero as soon as either component does and stays on
-the components' own scale, so its maximum is about 0.5 rather than 1.}
-\item{\code{balanced_joint_effect}}{\code{2 * sqrt(d_nec * d_suf)}, normalised onto
+summary. It is zero whenever either component is zero and remains on the
+components' own scale, so its maximum is about 0.5 rather than 1.}
+\item{\code{balanced_joint_effect}}{\code{2 * sqrt(d_nec * d_suf)}, normalized onto
 \verb{[0, 1]}. Partially compensatory: a larger component raises it at a
-diminishing rate, and it still collapses to zero if either component
-does. At an equal component sum of 0.80, \verb{(0.40, 0.40)} gives 0.80 and
-\verb{(0.70, 0.10)} gives 0.529. It is \emph{not} a measure of balance: \verb{(0.50, 0.125)} and \verb{(0.25, 0.25)} both score 0.50. The \code{balance} column measures
-that separately.}
-\item{\code{joint_empty_zone_coverage}}{The share of the scope that at least
-one claim rules out, \code{1 - admissible_region_share}. Curvature-neutral: it reaches
-1 whenever the admissible region closes, whatever the shape of the relation.}
+diminishing rate, and it is zero whenever either component is zero. At
+an equal component sum of 0.80, \verb{(0.40, 0.40)} gives 0.80 and
+\verb{(0.70, 0.10)} gives 0.529. It is not a measure of balance:
+\verb{(0.50, 0.125)} and \verb{(0.25, 0.25)} both score 0.50. The \code{balance} column
+measures balance separately.}
+\item{\code{joint_empty_space_coverage}}{The share of the scope that at least
+one claim rules out, \code{1 - admissible_region_share}. Curvature-neutral: it
+reaches 1 whenever the admissible region closes, regardless of the shape
+of the relation.}
 }
 
 \code{min} and the geometric mean are the power means at \code{p = -Inf} and \code{p = 0},
-so choosing between them is choosing how much compensation to allow; the
-component sum sits at \code{p = 1}, the fully compensatory end, and is a poor
-conjunction summary because one strong component can carry it.
-\code{\link[=nsca_joint]{nsca_joint()}} exposes the family directly.
+so choosing between them amounts to choosing how much compensation to
+allow; the component sum corresponds to \code{p = 1}, the fully compensatory
+end, and is less suited to summarizing a conjunction because one strong
+component can dominate it. \code{\link[=nsca_joint]{nsca_joint()}} exposes the family directly.
 }
 
 \section{The area identity}{
 
-The two empty spaces and the admissible region tile the scope, so by inclusion and
-exclusion
+The two empty spaces and the admissible region tile the scope, so by
+inclusion and exclusion
 
 \deqn{\mathrm{admissible\_region\_share} = 1 - d_{nec} - d_{suf} + O}
 
-where \eqn{O} is \code{overlap_share}. Everything else follows from it rather
-than being asserted separately. Because \code{admissible_region_share} is a share of the
-scope it lies in \verb{[0, 1]} unconditionally, and therefore so does
-\code{joint_empty_zone_coverage}. The other two indices are bounded only up to
-the overlap:
+where \eqn{O} is \code{overlap_share}. The remaining properties follow from
+this identity rather than being asserted separately. Because
+\code{admissible_region_share} is a share of the scope, it lies in \verb{[0, 1]}
+unconditionally, and therefore so does \code{joint_empty_space_coverage}. The
+other two indices are bounded only up to the overlap:
 
 \deqn{d_{nec} + d_{suf} \le 1 + O, \quad
       \mathrm{weakest\_effect} \le 0.5 + O/2, \quad
@@ -66,50 +83,52 @@ the overlap:
 
 Both bounds are tight and are attained exactly by a perfect diagonal, where
 \code{O} is \code{1 / (n - 1)}: at \code{n = 40} the observed values are 0.5128 and 1.0256
-against bounds of 0.5128 and 1.0256. The excess is discretization, not
-evidence, and the indices are left unclamped so that it stays visible.
+against bounds of 0.5128 and 1.0256. The excess reflects discretization
+rather than evidence, and the indices are left unclamped so that it
+remains visible.
 }
 
 \section{Vocabulary}{
 
 The column names follow the condition analysis in degree framework.
-\code{relationship} states the direction as a claim about the theorised X-Y
+\code{relationship} states the direction as a claim about the theorized X-Y
 relationship, as in Table 1 of that framework, not about the shape of the
 estimated frontier. \code{necessity_empty_space} and \code{sufficiency_empty_space}
 name what each expected empty space would contain, and
-\code{necessity_boundary} and \code{sufficiency_boundary} say whether the boundary
+\code{necessity_boundary} and \code{sufficiency_boundary} state whether the boundary
 separating it is a ceiling, which limits how high the outcome can be for a
-given condition value, or a floor, which limits how low. The two are always
-one of each, because the two corners are diagonally opposite.
+given condition value, or a floor, which limits how low. One of the two is
+a ceiling and the other a floor, because the two corners are diagonally
+opposite.
 }
 
 \section{The disjointness check}{
 
 Whenever the two frontiers do not cross, the floor lies at or below the
 ceiling throughout the scope, so no point belongs to both expected empty
-spaces. Because each component effect size is that space's share of the same
-scope, the two shares cannot sum to more than one. Component effect sizes
-summing above one therefore say the frontiers have crossed and the joint
-result needs diagnosis before interpretation, rather than that it is
-unusually strong. \code{component_sum} reports \code{d_nec + d_suf} so that this rule
-can be applied directly.
+spaces. Because each component effect size is that space's share of the
+same scope, the two shares cannot sum to more than one. Component effect
+sizes that sum to more than one therefore indicate that the frontiers have
+crossed and that the joint result requires diagnosis before
+interpretation, not that it is unusually strong. \code{component_sum} reports
+\code{d_nec + d_suf} so that this rule can be applied directly.
 
-\code{frontiers_crossed} answers the same question from the measurement rather
-than from the sum. The sum is a proxy for a crossing that is not otherwise
-available; here it is available, because \code{overlap_share} is the area on
-which the two empty spaces actually overlap, integrated from the
-reconstructed frontiers. Using the measurement avoids the proxy's failure
-mode, which is that the sum and the allowance below are reached by different
-routes and can disagree in the last few digits on exactly the configuration
-the check is meant to bless.
+\code{frontiers_crossed} addresses the same question from the measurement
+rather than from the sum. The sum serves as a proxy when the crossing
+itself is not available; here it is available, because \code{overlap_share} is
+the area on which the two empty spaces overlap, integrated from the
+reconstructed frontiers. Using the measurement avoids a limitation of the
+proxy: the sum and the allowance below are computed by different routes
+and can disagree in the last few digits on precisely the configuration the
+check is intended to accept.
 
 That allowance exists because a step frontier overlaps itself by
-construction. Between two consecutive observations the upper staircase still
-holds the earlier value while the lower one has already moved, so the two
-spaces overlap on every tread; summed over the \code{n - 1} treads that is
-exactly \code{1 / (n - 1)} of the scope, attained by a perfect diagonal, which is
-the cleanest relation there is rather than a failure. For every smooth
-frontier the allowance is zero and any overlap at all is a genuine crossing.
+construction. Between two consecutive observations the upper staircase
+still holds the earlier value while the lower one has already moved, so
+the two spaces overlap on every tread; summed over the \code{n - 1} treads this
+is exactly \code{1 / (n - 1)} of the scope, attained by a perfect diagonal,
+which is an ideal relation rather than a failure. For every smooth
+frontier the allowance is zero, and any overlap indicates a crossing.
 
 \code{frontiers_crossed} asks whether the frontiers crossed at all;
 \code{geometry_acceptable} asks whether they crossed by more than
@@ -119,14 +138,14 @@ acceptable geometry.
 
 \section{Geometry diagnostics}{
 
-\code{reconstruction_error} is the residual of the identity above. The two sides
-come from different places: \code{admissible_region_share} and \code{overlap_share} are
-integrated from the frontiers this package reconstructs, while \code{d_nec} and
-\code{d_suf} are reported by the engines from their own internal frontiers. A
-residual near zero says the two agree; a large one says the reconstruction
-has drifted from what the engine actually fitted, which is the one failure
-mode that a plot cannot reveal, because a wrongly reconstructed frontier
-still looks like a frontier.
+\code{reconstruction_error} is the residual of the identity above. The two
+sides come from different sources: \code{admissible_region_share} and
+\code{overlap_share} are integrated from the frontiers this package
+reconstructs, while \code{d_nec} and \code{d_suf} are reported by the engines from
+their own internal frontiers. A residual near zero indicates that the two
+agree; a large one indicates that the reconstruction differs from what the
+engine fitted. A plot may not reveal this, because an incorrectly
+reconstructed frontier still looks like a frontier.
 
 \code{degenerate} marks a condition whose axis does not vary inside the declared
 scope. \code{geometry_acceptable} combines both diagnostics with the excess
@@ -136,48 +155,147 @@ construction.
 
 \section{Decisions}{
 
-\code{p_nsca_iut} is \code{max(p_nec, p_suf)}, the intersection-union combination. It
-passes only when both components reject at \code{test.p_threshold}, and it is
+Each p-value addresses a different question, and \code{joint_support} is based
+on the first of them.
+\itemize{
+\item \code{p_nsca_iut} is \code{max(p_nec, p_suf)}: whether each of the two corners is
+emptier than random pairing produces. It passes only when both
+components reject at \code{test.p_threshold}. Against random pairing it is
 level-alpha without any assumption that the two component tests are
-independent, so no correction is needed merely for combining two
-pre-specified tests. Multiplicity across several conditions or frontiers is
-a separate matter. The combination is also typically conservative, so an
-NSCA design needs more observations than either component alone.
+independent (the intersection-union rule), so no correction is needed
+merely for combining two pre-specified tests. It is typically
+conservative, so an NSCA design tends to require more observations than
+either component alone. Its reliability depends on that of the component
+tests it combines; \code{?NSCA} describes a situation in which one of them may
+reject too readily.
+\item \code{p_weakest_perm} asks whether the smaller of the two empty areas,
+\code{weakest_effect}, is larger than random pairing produces. Its null is
+random pairing of both sides at once, so it is calibrated against that,
+and not against a state in which one component holds and the other does
+not. It concerns the smaller area, whereas \code{p_nsca_iut} concerns the
+weaker evidence, so the two can disagree when one side's random-pairing
+floor is high. On one shared sequence it is at most the p-value of the
+component whose observed area is the smaller, so it can reject where
+that component's own test does not; it is therefore not suited to serve
+as evidence that both corners are empty.
+\item \code{p_sum_perm} asks whether the two corners together, \code{component_sum = d_nec + d_suf}, are emptier than random pairing produces. A single
+strongly empty corner can be enough to make it small, so it describes the
+two corners jointly and complements \code{p_nsca_iut}, which asks the same of
+each corner separately. \code{joint_empty_space_coverage} differs from
+\code{component_sum} only by \code{overlap_share}, which is zero unless the two
+frontiers cross.
+}
 
-\code{p_weakest_perm} tests \code{min(d_nec, d_suf)} directly and is available only
-when \code{shared.test.rep} was used, because the null distribution of a
-statistic of both components depends on how they co-vary under random
-pairing. It answers a different question from the intersection-union rule
-and does not replace it: its null is random pairing alone, which is a proper
-subset of the union null "not necessary or not sufficient", so it carries no
-level-alpha guarantee over that union. Treat it as a sensitivity analysis.
-\code{p_source} reports whether the component p-values came from the engines'
-own separate runs or from the shared sequence.
+\code{p_weakest_perm} and \code{p_sum_perm} require \code{shared.test.rep}, because the
+null distribution of a statistic involving both components depends on how
+the two co-vary under one shuffle. We suggest choosing the p-value that
+corresponds to the research question before examining the results;
+reporting several p-values as findings raises a multiple-testing question
+(see \code{p.adjust}). Multiplicity across several conditions or frontiers is a
+separate matter.
+
+\code{p_source} reports whether the p-values came from the engines' own
+separate runs or from the shared sequence.
+}
+
+\section{Null distributions}{
+
+Each null summary in a row is taken from the distribution that produced
+its p-value: the shared sequence when there is one, otherwise each
+engine's own test. \code{d_nec_null} and \code{d_suf_null} are the means: what random
+pairing alone produces at this sample size, scope and technique.
+\code{d_nec_critical}, \code{d_suf_critical}, \code{component_sum_critical} and
+\code{weakest_effect_critical} are the \code{1 - alpha} quantiles: the value that
+random pairing exceeds in only a proportion \code{alpha} of permutations, which
+each statistic needs to exceed for a single test at \code{alpha} to reject.
+Each statistic has its own critical value; that of the sum is not the sum
+of the two. The last two require a shared sequence. Adjustment for
+multiple testing does not change them; see the section on multiple
+testing.
+
+\code{p_nec_accuracy}, \code{p_suf_accuracy}, \code{p_weakest_perm_accuracy} and
+\code{p_sum_perm_accuracy} give the Monte Carlo margin of each p-value, as NCA
+reports its \code{p-accuracy}: the half-width of an interval at
+\code{test.p_confidence}. They are zero when every ordering of the outcome was
+evaluated, since the p-value is then exact.
 
 \code{necessity_supported} and \code{sufficiency_supported} require significance and,
 when a \code{relevance} threshold was pre-specified, an effect at least that
 large. \code{joint_support} additionally requires \code{geometry_acceptable}, so a
-degenerate or badly reconstructed row cannot be reported as supported.
+degenerate or poorly reconstructed row cannot be reported as supported.
 }
 
 \section{Blind spot}{
 
 All three joint summaries are areas over the declared scope and share one
-blind spot. A constant outcome at the centre of an imposed scope leaves the
-upper and lower halves both empty, so both components reach 0.5, the data
-zone closes, and every index reports perfect joint support for data
-carrying no information. \code{balanced_joint_effect} is the most exposed, since
-\code{weakest_effect} at least follows the weaker side once the constant sits off
-centre. The \code{degenerate} flag and the permutation screen are what cover it:
-permuting a constant outcome reproduces the same geometry every time, so
-every p-value goes to 1.
+blind spot. A constant outcome at the center of an imposed scope leaves the
+upper and lower halves both empty, so both components reach 0.5, the
+admissible region closes, and every index reaches its maximum for data
+that carry no information. \code{balanced_joint_effect} is the most affected,
+since \code{weakest_effect} at least follows the weaker side once the constant
+lies off center. The \code{degenerate} flag and the permutation tests address
+this case: permuting a constant outcome reproduces the same geometry each
+time, so every p-value is 1.
 
-No magnitude benchmarks are supplied for any index. Conventions for a single
-NCA effect size do not transfer: the scales differ, and under independence
-both components carry a positive finite-sample bias that
+Dul's conventional bands apply to \code{d_nec} and \code{d_suf}, which are ordinary
+NCA effect sizes; \code{\link[=nsca_magnitude]{nsca_magnitude()}} returns them as a convention to cite
+rather than as values calibrated for a particular design. We suggest
+reading a band together with \code{d_nec_null}, which indicates how much of the
+value the geometry produces at that sample size, scope and technique.
+
+No benchmarks are supplied for the joint indices. Conventions for a single
+NCA effect size do not carry over to them: the scales differ, and under
+independence both components carry a positive finite-sample floor that
 \code{balanced_joint_effect} amplifies rather than cancels, by an amount
-depending on the sample size, the frontier technique and the scope.
-Calibrate by simulation on the design at hand.
+depending on the sample size, the frontier technique and the scope. The
+joint indices are this package's own constructions, no convention has been
+published for them, and one supplied here would come from the same package
+that defines the indices. Calibration by simulation on the design at hand
+is suggested instead; \code{\link[=nsca_power]{nsca_power()}} and \code{\link[=nsca_resample]{nsca_resample()}} support this.
+}
+
+\section{Multiple testing}{
+
+Each condition involves two component tests, combined into one decision by
+the intersection-union test, so a model with \code{k} conditions produces
+\verb{2k} component p-values and \code{k} joint ones.
+
+Within a condition, the multiplicity is already accounted for. The IUT
+rejects only when both components reject, so \code{p_nsca_iut} is the larger of
+the two p-values and the level of the test is at most \code{alpha}; the test is
+conservative, and its rejection rate is usually below the nominal rate.
+
+Across conditions, no adjustment is made by default. If the \code{k} joint tests
+were independent, the probability of at least one false positive at
+\code{alpha} would be at most \eqn{1 - (1 - \alpha)^k}; it is an upper bound
+because each joint test is itself conservative. The \code{Settings} block
+printed by \code{\link[=print]{print()}} reports both points together, since the
+conservativeness of each joint test alone gives an incomplete picture.
+
+Adjustment is available as an argument rather than applied by default,
+for the reason given in \code{\link[SCAtools:sca_table]{SCAtools::sca_table()}}: the appropriate correction
+depends on the design. When the family is known, \code{p.adjust} applies the
+correction; it adjusts the two components and rebuilds the joint p-value
+from them, as described under that argument.
+
+Adjustment changes the p-values and the decisions, not the \verb{*_critical}
+columns. These remain the critical values of single tests at \code{alpha}:
+reference lines rather than the threshold an adjusted test needs to
+exceed, so an effect size above its critical value may still fall short
+after adjustment. An adjusted counterpart exists only for Bonferroni, as the
+\code{1 - alpha / k} quantile of each null, which requires many more
+permutations to estimate than the p-value does; the step-wise methods have
+none, because the level at which each condition is tested depends on the
+p-values of the others. The table prints a message to this effect whenever
+it adjusts.
+
+Adjustment also raises the smallest p-value a condition can reach. A
+permutation p-value cannot fall below \code{1 / test.rep} (`1 / (shared.test.rep
+\itemize{
+\item 1)\verb{from the shared sequence), and for a condition that is the only strong one among}k\verb{it is multiplied by at least}k\verb{, so when that product exceeds }alpha` the condition cannot be significant, regardless of the
+data. The table issues a warning in that case and states the number of
+permutations that would be required.
+}
 }
 
 \examples{
@@ -186,6 +304,9 @@ x <- sort(runif(60))
 dat <- data.frame(X = x, Y = pmin(pmax(x + rnorm(60, 0, 0.1), 0), 1))
 fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh")
 nsca_table(fit)
+
+# Column names retired in earlier releases, appended as duplicates
+names(nsca_table(fit, legacy = TRUE))
 }
 \seealso{
 \code{\link[=nsca_results]{nsca_results()}}, \code{\link[=nsca_joint]{nsca_joint()}}, \code{\link[=nsca_extract]{nsca_extract()}},

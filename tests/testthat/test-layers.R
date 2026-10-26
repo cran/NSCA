@@ -22,16 +22,19 @@ test_that("the necessity layer is the engine's own necessity analysis", {
 
   for (param in c("Effect size", "Ceiling zone", "Ceiling accuracy", "Fit",
                   "Slope", "Intercept")) {
-    column <- c("Effect size" = "effect_size", "Ceiling zone" = "empty_zone_area",
+    column <- c("Effect size" = "effect_size", "Ceiling zone" = "empty_space_area",
                 "Ceiling accuracy" = "frontier_accuracy", "Fit" = "fit",
                 "Slope" = "slope", "Intercept" = "intercept")[[param]]
-    expect_equal(
-      nec[[column]],
-      as.numeric(NCA::nca_extract(direct, "X", "ce_fdh", param)),
-      info = param
-    )
+    engine <- as.numeric(NCA::nca_extract(direct, "X", "ce_fdh", param))
+    # Since 0.5.0 every share is reported on [0, 1]. The engine reports two of
+    # them as percentages, so those two are divided here rather than the
+    # package leaving two scales side by side in one row.
+    if (param %in% c("Ceiling accuracy", "Fit")) {
+      engine <- engine / 100
+    }
+    expect_equal(nec[[column]], engine, info = param)
   }
-  expect_identical(nec$analysis, "necessity")
+  expect_identical(nec$component, "necessity")
   expect_identical(nec$empty_corner, 1L)
   expect_match(nec$statement, "necessary for")
   expect_false(grepl("sufficient", nec$statement))
@@ -45,9 +48,9 @@ test_that("the sufficiency layer is SCAtools' own table", {
     SCAtools::sca_analysis(dat, "X", "Y", direction = "HH", ceilings = "ce_fdh")
   )
   expect_equal(suf$effect_size, direct$effect_size)
-  expect_equal(suf$empty_zone_area, direct$empty_zone_area)
+  expect_equal(suf$empty_space_area, direct$empty_space_area)
   expect_equal(suf$fit, direct$fit)
-  expect_identical(suf$analysis, "sufficiency")
+  expect_identical(suf$component, "sufficiency")
   expect_identical(suf$empty_corner, 4L)
   expect_match(suf$statement, "sufficient for")
 })
@@ -66,6 +69,7 @@ test_that("the two component layers share a column layout", {
 })
 
 test_that("the joint layer adds no evidence of its own", {
+  skip_on_cran()
   # p_nsca_iut is a conjunction, not a third experiment. It must equal the larger
   # of the two component p-values exactly, and can never be the smaller.
   dat <- three_layer_data()
@@ -86,6 +90,7 @@ test_that("the joint layer adds no evidence of its own", {
 })
 
 test_that("the significance flags agree with the p-values and with each other", {
+  skip_on_cran()
   dat <- three_layer_data()
   fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh", test.rep = 200)
   joint <- nsca_table(fit)
@@ -98,10 +103,11 @@ test_that("the significance flags agree with the p-values and with each other", 
     joint$necessity_significant & joint$sufficiency_significant
   )
   # The joint-support verdict and the flag cannot disagree.
-  expect_identical(joint$nsca_significant, joint$joint_support_status == "supported")
+  expect_identical(joint$nsca_significant, joint$significance_status == "supported")
 })
 
 test_that("the alpha used by the flags is the one that was requested", {
+  skip_on_cran()
   dat <- three_layer_data(noise = 0.35)
   strict <- nsca_table(nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh",
                                      test.rep = 200, test.p_threshold = 0.001))
@@ -120,7 +126,7 @@ test_that("without a permutation test nothing claims significance", {
   expect_true(is.na(joint$necessity_significant))
   expect_true(is.na(joint$sufficiency_significant))
   expect_true(is.na(joint$nsca_significant))
-  expect_identical(joint$joint_support_status, "not tested")
+  expect_identical(joint$significance_status, "not tested")
 })
 
 test_that("the verdict names which component failed", {
@@ -132,13 +138,13 @@ test_that("the verdict names which component failed", {
   lopsided <- data.frame(X = x, Y = pmin(x + runif(n, 0, 0.7), 1))
   joint <- nsca_table(nsca_analysis(lopsided, "X", "Y", ceilings = "ce_fdh",
                                     test.rep = 200))
-  expect_true(joint$joint_support_status %in%
+  expect_true(joint$significance_status %in%
     c("supported", "necessity fails", "sufficiency fails", "neither component"))
-  if (joint$joint_support_status == "necessity fails") {
+  if (joint$significance_status == "necessity fails") {
     expect_gt(joint$p_nec, 0.05)
     expect_lte(joint$p_suf, 0.05)
   }
-  if (joint$joint_support_status == "sufficiency fails") {
+  if (joint$significance_status == "sufficiency fails") {
     expect_lte(joint$p_nec, 0.05)
     expect_gt(joint$p_suf, 0.05)
   }
@@ -150,7 +156,7 @@ test_that("printing shows all three layers and the inference caveat", {
   printed <- paste(capture.output(print(fit)), collapse = "\n")
 
   expect_match(printed, "1\\. Necessary Condition Analysis")
-  expect_match(printed, "2\\. Sufficiency Condition Analysis")
+  expect_match(printed, "2\\. Sufficient Condition Analysis")
   expect_match(printed, "3\\. Necessary and Sufficient Condition Analysis")
   # The caveat is the point of the layer separation and must not be dropped.
   expect_match(printed, "random-pairing")
@@ -166,10 +172,10 @@ test_that("printing shows all three layers and the inference caveat", {
   expect_match(printed, "partially compensatory")
   expect_match(printed, "benchmarks")
 
-  summarised <- paste(capture.output(print(summary(fit))), collapse = "\n")
-  expect_match(summarised,
+  summarized <- paste(capture.output(print(summary(fit))), collapse = "\n")
+  expect_match(summarized,
                "not a direct test of a causal necessary-and-sufficient relation")
-  expect_match(summarised, "magnitude benchmarks")
+  expect_match(summarized, "magnitude benchmarks")
 })
 
 test_that("summary carries the three layers as data, not only as text", {

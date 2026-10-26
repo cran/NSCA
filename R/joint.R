@@ -7,7 +7,7 @@
 # geometry of two empty zones fixes p. The package therefore computes two
 # points on the family, names the parameter, and leaves the family open.
 #
-# The normalisation is the one piece that is not a matter of taste. For any
+# The normalization is the one piece that is not a matter of taste. For any
 # p <= 1, M_p(d_nec, d_suf) <= M_1 = (d_nec + d_suf)/2, and the two empty zones
 # are disjoint subsets of one scope box, so d_nec + d_suf <= 1 and M_p <= 0.5.
 # Doubling therefore maps the index onto [0, 1] without adding an assumption,
@@ -45,54 +45,56 @@
 #'
 #' The index is the power mean
 #' \eqn{M_p = ((d_{nec}^p + d_{suf}^p)/2)^{1/p}}, optionally doubled so that it
-#' spans `[0, 1]`. The parameter `p` is the degree of compensation:
+#' spans `[0, 1]`. The parameter `p` sets the degree of compensation:
 #'
 #' \describe{
-#'   \item{`p = -Inf`}{`min(d_nec, d_suf)`. Fully non-compensatory: no amount
-#'   of strength on one side raises the index if the other side is weak. This
-#'   is the `weakest_effect` column of [nsca_table()], reported there
-#'   unnormalised so that it stays on the components' own scale.}
+#'   \item{`p = -Inf`}{`min(d_nec, d_suf)`. Fully non-compensatory: the index
+#'   follows the weaker component only, so additional strength on the other
+#'   side does not raise it. This is the `weakest_effect` column of
+#'   [nsca_table()], reported there unnormalized so that it stays on the
+#'   components' own scale.}
 #'   \item{`p = -1`}{The harmonic mean. Less compensatory than the geometric
-#'   mean, still zero as soon as either component is zero.}
-#'   \item{`p = 0`}{The geometric mean. **Partially** compensatory: a larger
-#'   component does raise the index, but at a diminishing rate, and the index
-#'   still collapses to zero if either component does. This is the
+#'   mean, and zero whenever either component is zero.}
+#'   \item{`p = 0`}{The geometric mean. Partially compensatory: a larger
+#'   component raises the index, but at a diminishing rate, and the index is
+#'   zero whenever either component is zero. This is the
 #'   `balanced_joint_effect` column of [nsca_table()].}
 #'   \item{`p = 1`}{The arithmetic mean, that is, half the sum. Fully
-#'   compensatory: one strong component alone can carry the index, so a
-#'   necessary-only relation scores as highly as a necessary-and-sufficient
-#'   one. This is
-#'   why the sum is a poor conjunction summary, but it is the same family, not
-#'   a different kind of quantity.}
+#'   compensatory: one strong component alone can produce a high index, so a
+#'   necessary-only relation can score as highly as a
+#'   necessary-and-sufficient one. For this reason the sum is less suited to
+#'   summarizing a conjunction, although it belongs to the same family rather
+#'   than being a different kind of quantity.}
 #' }
 #'
-#' The geometric mean is the middle course, and describing it as a
-#' non-compensatory "AND" would overstate it. What it does is penalise
+#' The geometric mean is an intermediate choice, and describing it as a
+#' non-compensatory "AND" would overstate its properties. It penalizes
 #' asymmetry: at an equal sum of 0.80, `(0.40, 0.40)` gives 0.80 and
 #' `(0.70, 0.10)` gives 0.529.
 #'
 #' No magnitude benchmarks are supplied. Conventions for a single NCA effect
-#' size do not transfer, because this index has a different scale and a
+#' size do not carry over, because this index has a different scale and a
 #' different null: under independence both components carry a positive
 #' finite-sample bias that a product of the two amplifies rather than cancels,
-#' and its size depends on `n`, the frontier technique and the scope. Calibrate
-#' by simulation on the design at hand before attaching words to values.
+#' and its size depends on `n`, the frontier technique and the scope. We
+#' suggest calibrating by simulation on the design at hand before attaching
+#' verbal labels to values.
 #'
 #' @param d_nec,d_suf Necessity and sufficiency effect sizes. Vectors are
 #'   recycled to a common length.
-#' @param p Degree of the power mean; the degree of compensation. Defaults to
-#'   `0`, the geometric mean.
-#' @param normalize Multiply by two so that the index spans `[0, 1]`. The
-#'   guarantee rests on `M_p <= (d_nec + d_suf)/2 <= 0.5` and therefore holds
-#'   only for `p <= 1`.
+#' @param p Degree of the power mean, which sets the degree of compensation.
+#'   Defaults to `0`, the geometric mean.
+#' @param normalize Whether to multiply by two so that the index spans
+#'   `[0, 1]`. This bound relies on `M_p <= (d_nec + d_suf)/2 <= 0.5` and
+#'   therefore holds only for `p <= 1`.
 #' @return A numeric vector, `NA` where either component is missing or
 #'   negative.
 #' @seealso [nsca_table()], [nsca_analysis()]
 #' @export
 #' @examples
 #' nsca_joint(0.40, 0.40)              # balanced
-#' nsca_joint(0.70, 0.10)              # same sum, penalised for asymmetry
-#' nsca_joint(0.40, 0.40, p = -Inf)    # the minimum, normalised
+#' nsca_joint(0.70, 0.10)              # same sum, penalized for asymmetry
+#' nsca_joint(0.40, 0.40, p = -Inf)    # the minimum, normalized
 #' nsca_joint(0.40, 0.40, p = -Inf, normalize = FALSE)   # weakest_effect
 nsca_joint <- function(d_nec, d_suf, p = 0, normalize = TRUE) {
   d_nec <- suppressWarnings(as.numeric(d_nec))
@@ -106,9 +108,9 @@ nsca_joint <- function(d_nec, d_suf, p = 0, normalize = TRUE) {
   if (isTRUE(normalize) && p > 1) {
     warning(
       paste0(
-        "Doubling maps the index onto [0, 1] only because M_p <= ",
-        "(d_nec + d_suf)/2 <= 0.5, which holds for p <= 1. At p > 1 the ",
-        "normalised value can exceed 1."
+        "Doubling maps the index onto [0, 1] because M_p <= ",
+        "(d_nec + d_suf)/2 <= 0.5, which holds only for p <= 1. For p > 1 the ",
+        "normalized value can exceed 1."
       ),
       call. = FALSE
     )

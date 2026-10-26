@@ -11,10 +11,10 @@ nsca_thresholds(
   scale = NULL,
   outcome_scale = NULL,
   convention = NULL,
+  correspondence.tolerance = NULL,
   inequality = c("strict", "inclusive"),
   digits = 6L,
-  legacy = FALSE,
-  boundary = NULL
+  legacy = FALSE
 )
 }
 \arguments{
@@ -29,58 +29,70 @@ in \code{\link[=nsca_analysis]{nsca_analysis()}}. See \code{\link[SCAtools:sca_s
 
 \item{convention}{\code{"absolute"} or \code{"directional"}.}
 
-\item{inequality}{Strict or inclusive inequalities. Renamed from \code{boundary}
-in 0.4.0, which is reserved for the theoretical line an expected empty
-space is separated by.}
+\item{correspondence.tolerance}{The largest necessity-sufficiency interval,
+in the units of the condition, that still counts as threshold
+correspondence. \code{NULL} uses the tolerance with which the model was fitted,
+which is \code{0} unless one was declared. See \code{\link[=nsca_analysis]{nsca_analysis()}} for the
+reasons why no substantive default is provided.
+
+A non-zero value adds two columns, \code{corresponds} and
+\code{correspondence_tolerance}, and enables the \code{"near correspondence"}
+category of \code{threshold_status}. At zero these columns are omitted, because
+they would carry no judgment, and a binary verdict placed beside a
+continuous interval tends to attract more attention than the interval
+itself. The default output therefore reports the interval; a verdict is
+added only when a width has been chosen and can be justified.}
+
+\item{inequality}{Strict (\code{"strict"}, the default) or inclusive
+(\code{"inclusive"}) inequalities in the reported rules.}
 
 \item{digits}{Significant digits in the formatted text.}
 
-\item{legacy}{Append the column names retired in 0.3.0 and 0.4.0 as
-duplicates. See \code{\link[=nsca_legacy_names]{nsca_legacy_names()}}.}
-
-\item{boundary}{Deprecated. Former name of \code{inequality}.}
+\item{legacy}{Whether to append the column names retired in 0.3.0, 0.4.0
+and 0.5.x as duplicates. See \code{\link[=nsca_legacy_names]{nsca_legacy_names()}}.}
 }
 \value{
 A data frame with one row per condition and outcome level.
 }
 \description{
-For every outcome level, reports the necessity and sufficiency thresholds
+For each outcome level, reports the necessity and sufficiency thresholds
 and the direction-oriented distance between them.
 }
 \details{
 For a fixed outcome target, the \emph{necessity-sufficiency interval} is the
 distance on the condition axis between the two thresholds: if a target
-requires at least 40 units of the condition but 70 units are enough for it,
-the interval runs from 40 to 70. It is not a confidence interval: it carries
-no statistical uncertainty.
+requires at least 40 units of the condition and 70 units are sufficient for
+it, the interval extends from 40 to 70. It is not a confidence interval and
+does not express statistical uncertainty.
 
 \code{necessity_sufficiency_interval} and \code{overlap_width} are reported on
-\code{scale}, the same scale as the two threshold columns they are the distance
-between, so a row can be checked by subtraction.
-\code{necessity_sufficiency_interval_actual} and \code{overlap_width_actual} keep the
-same two quantities in the units of the data whatever \code{scale} is asked for,
-and \code{threshold_gap_actual} is the signed actual-unit gap the pair is split
-from. Before 0.4.3 the two unsuffixed columns held actual units on every
-scale, which put three columns of two different kinds in one printed row.
+\code{scale}, the same scale as the two threshold columns whose distance they
+measure, so that a row can be checked by subtraction.
+\code{necessity_sufficiency_interval_actual} and \code{overlap_width_actual} report
+the same two quantities in the units of the data, whatever \code{scale} is
+requested, and \code{threshold_gap_actual} is the signed gap in actual units from
+which both are derived.
 
 Under \code{scale = "percentile"} the reported column is a difference of ranks
-rather than a distance, so it reads as the share of cases lying between the
-two thresholds. That is a useful quantity, but it is not a width: equal
-percentile gaps in a dense and in a sparse part of the distribution stand
-for very different distances on the condition axis. For a normalised width
-that is comparable across studies use \code{"percentage.range"} or \code{"sd"}.
+rather than a distance, so it is interpreted as the share of cases lying
+between the two thresholds. This is a useful quantity, but it is not a
+width: equal percentile gaps in a dense and in a sparse part of the
+distribution correspond to very different distances on the condition axis.
+For a normalized width that is comparable across studies,
+\code{"percentage.range"} or \code{"sd"} may be more suitable.
 
 The interval is also distinct from the component effect sizes. Effect sizes
-aggregate exclusion over the whole scope, whereas the interval is read at one
-outcome target, so large component effects do not guarantee a narrow interval
-at any particular level and a narrow interval at one target says nothing
-about the others. Reporting both, at several targets, is not redundant.
+aggregate exclusion over the whole scope, whereas the interval is evaluated
+at one outcome target. Large component effects therefore do not guarantee a
+narrow interval at any particular level, and a narrow interval at one target
+does not imply anything about the others. Reporting both quantities, at
+several targets, is not redundant.
 }
 \section{The three regions}{
 
-Necessity and sufficiency answer different questions about the same outcome
-level, and together they cut the condition axis into three parts. For a
-high-X direction:
+Necessity and sufficiency address different questions about the same
+outcome level, and together they divide the condition axis into three parts.
+For a high-X direction:
 
 \describe{
 \item{below \code{necessity_threshold}}{The outcome level is out of reach.}
@@ -94,28 +106,48 @@ region whose area \code{admissible_region_share} reports.}
 For a low-X direction these inequalities reverse: values above the necessity
 threshold are out of reach and values below the sufficiency threshold are
 guaranteed. \code{threshold_gap_actual} is direction-oriented, so a positive
-value means an admitted interval in all four directions. A negative value is
-reported as \code{"frontiers overlap"} in \code{threshold_status}, with its magnitude
-in \code{overlap_width} and \code{overlap_width_actual}, rather than being silently
-truncated to zero: the two
-thresholds are then mutually incompatible at that level, which is a
-modelling problem and not a narrow admissible interval.
+value indicates an admitted interval in all four directions. A negative
+value is reported in \code{threshold_status}, with its magnitude in
+\code{overlap_width} and \code{overlap_width_actual}, rather than being truncated to
+zero.
+
+The interpretation of a crossing depends on the technique. An exact envelope
+cannot cross itself: CE-FDH's two frontiers are a running minimum and a
+running maximum over the same observations, so the floor cannot rise above
+the ceiling, and a crossing there reflects either the one-tread artifact of
+a step function or a genuine specification problem. Fitted lines, by
+contrast, can cross. The line techniques (CR-FDH, CR-VRS, \code{qr}, \code{cols})
+regress a straight line through the frontier peers, and the narrower the
+band between the two frontiers, the more easily two separately fitted lines
+cross inside it. A small crossing under a line technique may therefore
+indicate a band narrower than the fitting error, which is the pattern an
+almost-perfect necessary-and-sufficient relation would produce. Such a
+crossing is consistent with strong correspondence rather than with a
+misspecified model.
+
+The two interpretations are distinguished by magnitude rather than by sign.
+Within \code{correspondence.tolerance} the two thresholds are treated as lying at
+the same X, whichever side the estimate fell on, and \code{corresponds} is
+\code{TRUE}. Beyond the tolerance in the negative direction, the floor lies above
+the ceiling over an interval, which is incompatible with the relation;
+\code{corresponds} is then \code{NA}, because the correspondence question cannot be
+answered there.
 
 The interval collapses to zero exactly where the relation is deterministic
 at that level, reported as \code{"exact correspondence"}: one X value is then both
 the minimum required and the sufficient level. An estimated interval of zero
-is \emph{consistent} with exact correspondence but does not by itself establish
-it, and a small non-zero interval should be called near correspondence only
-when a substantively justified tolerance has been defined. A positive
+is consistent with exact correspondence but does not by itself establish
+it, and a small non-zero interval is best described as near correspondence
+only when a substantively justified tolerance has been defined. A positive
 interval does not negate joint support; it indicates imperfect threshold
-correspondence. Neither NCA nor SCA alone can produce this table: each
+correspondence. Neither NCA nor SCA alone can produce this table, since each
 supplies one edge of the interval.
 
-The two out-of-range markers read differently on the two sides, because
-their meaning inverts under contraposition. On the necessity side they keep
-their necessity reading, giving \code{"no_minimum"}, \code{"no_maximum"} and
-\code{"unattainable"}; on the sufficiency side SCAtools supplies the sufficiency
-reading.
+The two out-of-range markers are interpreted differently on the two sides,
+because their meaning inverts under contraposition. On the necessity side
+they retain their necessity interpretation, giving \code{"no_minimum"},
+\code{"no_maximum"} and \code{"unattainable"}; on the sufficiency side SCAtools
+supplies the sufficiency interpretation.
 }
 
 \examples{
@@ -124,6 +156,7 @@ x <- sort(runif(60))
 dat <- data.frame(X = x, Y = pmin(pmax(x + rnorm(60, 0, 0.1), 0), 1))
 fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh")
 nsca_thresholds(fit)
+nsca_thresholds(fit, scale = "actual")
 }
 \seealso{
 \code{\link[=nsca_table]{nsca_table()}}, \code{\link[=nsca_analysis]{nsca_analysis()}}, \code{\link[=nsca_legacy_names]{nsca_legacy_names()}}

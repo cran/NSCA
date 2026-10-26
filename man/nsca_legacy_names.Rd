@@ -2,7 +2,7 @@
 % Please edit documentation in R/results.R
 \name{nsca_legacy_names}
 \alias{nsca_legacy_names}
-\title{Names retired in NSCA 0.3.0 and 0.4.0}
+\title{Names retired in NSCA 0.3.0, 0.4.0 and 0.5.x}
 \usage{
 nsca_legacy_names()
 }
@@ -12,21 +12,31 @@ current ones.
 }
 \description{
 The 0.3.0 vocabulary followed the geometry rather than the interpretation:
-the region between the two frontiers was named for what it is and the two
-joint indices for what they do to a weak component rather than for a verdict.
+the region between the two frontiers was named for what it is, and the two
+joint indices for how they treat a weak component rather than for a
+verdict.
 }
 \details{
-0.4.0 goes further and adopts the vocabulary of \emph{condition analysis in
-degree}. The region compatible with both components is the \strong{admissible
-region}; the distance on the X scale between the two thresholds at one
-outcome target is the \strong{necessity-sufficiency interval}; evidence for both
-components is \strong{joint support}; and \emph{boundary} is reserved for the
-theoretical line an expected empty space is separated by, so the argument
-controlling the strictness of a reported inequality became \code{inequality}.
+0.4.0 adopted the vocabulary of \emph{condition analysis in degree}. The region
+compatible with both components is the \strong{admissible region}; the distance
+on the X scale between the two thresholds at one outcome target is the
+\strong{necessity-sufficiency interval}; evidence for both components is
+\strong{joint support}; and \emph{boundary} is reserved for the theoretical line
+that separates an expected empty space, so the argument controlling the
+strictness of a reported inequality became \code{inequality}.
 
-Old names remain usable. \code{\link[=nsca_table]{nsca_table()}} and \code{\link[=nsca_thresholds]{nsca_thresholds()}} append them
-as duplicate columns when called with \code{legacy = TRUE}, \code{\link[=nsca_extract]{nsca_extract()}}
-accepts them with a warning, and the retired arguments warn but still work.
+0.5.x replaced the shorthand "empty zone" with the framework's "empty
+space", renamed \code{joint_support_status} to \code{significance_status} because it
+considers only the two p-values, and named the technique column of the
+joint tables \code{frontier}, as in the component tables, so that "ceiling"
+refers only to the boundary type.
+
+Retired column names remain available. \code{\link[=nsca_table]{nsca_table()}} and
+\code{\link[=nsca_thresholds]{nsca_thresholds()}} append them as duplicate columns when called with
+\code{legacy = TRUE}, each an exact copy of the current column. \code{\link[=nsca_extract]{nsca_extract()}}
+no longer accepts them: it stops with an error that names the replacement.
+The retired argument \code{boundary} was removed in 0.5.0; its replacement is
+\code{inequality}.
 }
 \examples{
 nsca_legacy_names()

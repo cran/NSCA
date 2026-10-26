@@ -19,14 +19,18 @@ nsca_analysis(
   step.size = NULL,
   cutoff = 0,
   qr.tau = 0.95,
+  reference.tau = 0.5,
   test.rep = 0,
   test.p_confidence = 0.95,
   test.p_threshold = 0.05,
   relevance = NULL,
   shared.test.rep = 0,
+  test.seed = NULL,
   shared.seed = NULL,
+  correspondence.tolerance = 0,
   geometry.max_overlap = 0.01,
   geometry.max_reconstruction = 0.02,
+  na.action = c("pairwise", "listwise"),
   purity = FALSE
 )
 }
@@ -38,20 +42,19 @@ nsca_analysis(
 \item{y}{A single outcome column.}
 
 \item{direction}{Necessary-and-sufficient direction(s): \code{"HH"}, \code{"LH"},
-\code{"HL"}, or
-\code{"LL"}. The first letter is the condition level and the second the outcome
-level.}
+\code{"HL"}, or \code{"LL"}. The first letter is the condition level and the second
+the outcome level.}
 
 \item{ceilings}{One or more empty-space frontier techniques, applied
-identically to both sides. \code{"ols"} is rejected here because it estimates
-central tendency rather than an empty space; pass it as \code{reference}
-instead.}
+identically to both sides. \code{"ols"} is not accepted here because it
+estimates central tendency rather than an empty space; it can be supplied
+as \code{reference} instead.}
 
 \item{reference}{Central-tendency lines drawn beside the two frontiers for
 comparison, or \code{NULL} for none. \code{"ols"} is the ordinary least-squares
 regression of the outcome on the condition, fitted to all the data. It is
-an average-effect summary, enters no joint index, no threshold and no
-support decision, and is reported by \code{\link[=nsca_reference]{nsca_reference()}}.}
+an average-effect summary; it does not enter any joint index, threshold
+or support decision, and is reported by \code{\link[=nsca_reference]{nsca_reference()}}.}
 
 \item{scope}{Optional theoretical scope \code{c(xmin, xmax, ymin, ymax)}, shared
 by both sides.}
@@ -68,11 +71,41 @@ the \code{threshold.y} scale.}
 
 \item{cutoff}{How out-of-range threshold values are represented.}
 
-\item{qr.tau}{Quantile used by the quantile-regression frontier.}
+\item{qr.tau}{Quantile used by the quantile-regression frontier, stated as
+the share of observations the line is intended to leave on the non-empty
+side. It is read that way in both directions: the engine fits \code{tau} when
+the empty space is an upper corner and \code{1 - tau} when it is a lower one
+(corners 3 and 4), so the default 0.95 is the 95th-percentile line where
+the empty space lies above and the 5th-percentile line where it lies
+below. Sufficiency in the \code{"HH"} direction has its empty space at high X
+with low Y, which is corner 4, and therefore fits the 5th percentile: a
+floor, not a ceiling. No manual inversion of \code{qr.tau} is needed to
+compensate.
+
+Two reported quantities behave differently for \code{qr} than for the other
+frontiers, and both follow from the line being placed by a quantile
+rather than by the observations at the edge of the cloud.
+\code{frontier_accuracy} counts the share of observations on the non-empty
+side, which quantile regression sets to \code{qr.tau} by construction, so a
+value of 0.95 reflects the input rather than evidence of a good fit.
+\code{fit} compares this frontier's empty area with CE-FDH's, and the engine
+returns \code{NA} whenever this area is the larger of the two. This often
+happens for a quantile line, because it may pass through observations
+where an envelope cannot. An \code{NA} fit for \code{qr} is therefore an ordinary
+result rather than a failure.}
+
+\item{reference.tau}{Quantile for a \code{"qr"} reference line, defaulting to
+\code{0.5} -- the median line. This is separate from \code{qr.tau}: a \code{qr}
+frontier lies at the edge of the cloud and uses \code{qr.tau}, whereas a \code{qr}
+reference line lies in its middle and uses \code{reference.tau}. Both can be
+requested at once, which the engine cannot express in a single call, so
+reference lines are computed by SCAtools rather than by the engine.}
 
 \item{test.rep}{Number of permutation resamples for the engines' own
-component tests. Zero skips testing, and without it no joint-support verdict
-can be reached.}
+component tests. Zero skips testing, in which case no joint-support
+decision can be reached. The p-value cannot fall below \code{1 / test.rep},
+nor below \verb{1 / n!} for a sample of \code{n} observations, so a count or a
+sample too small to reach \code{test.p_threshold} is reported with a warning.}
 
 \item{test.p_confidence}{Confidence level for permutation p-value accuracy.}
 
@@ -86,11 +119,42 @@ large as well as a significant test. \code{NULL} means no relevance criterion
 was pre-specified, and support then rests on significance alone.}
 
 \item{shared.test.rep}{Number of replications of the shared permutation
-sequence. Zero, the default, skips it; \code{p_weakest_perm} is then \code{NA} and
-the component p-values come from the engines.}
+sequence. Zero, the default, skips it; \code{p_weakest_perm} and \code{p_sum_perm}
+are then \code{NA} and the component p-values come from the engines. Its
+p-values cannot fall below \code{1 / (shared.test.rep + 1)}, and a count too
+small to reach \code{test.p_threshold} is reported with a warning.}
+
+\item{test.seed}{Optional seed for the two component permutation tests, so
+that \code{p_nec}, \code{p_suf} and therefore \code{p_nsca_iut} and \code{joint_support} are
+reproducible. The caller's random stream is restored afterward.
+
+A single seed yields two sequences. The two components are tested on two
+independent shuffles, and seeding both engines with the same number
+would give them the same sequence, that is, the shared-sequence design
+obtained unintentionally and without the bookkeeping that makes it
+interpretable. The seed given here is therefore used once, to draw two
+component seeds; \code{shared.test.rep} and \code{shared.seed} remain the way to
+request a single sequence explicitly.}
 
 \item{shared.seed}{Optional seed for the shared sequence. The caller's
-random stream is restored afterwards.}
+random stream is restored afterward.}
+
+\item{correspondence.tolerance}{How wide a necessity-sufficiency interval
+still counts as threshold correspondence, in the units of the condition.
+In a perfectly necessary-and-sufficient relation the two thresholds
+coincide at every outcome level, so the interval between them is zero;
+this argument sets how far from zero still counts as close enough.
+
+The default of \code{0} is not a recommendation. The width at which a
+relation ceases to be necessary-and-sufficient is a substantive claim
+about the subject matter, and a package-supplied default would be the
+kind of unjustified tolerance the framework cautions against. We suggest
+setting it only when a particular width can be justified, and otherwise
+leaving it at zero and reading the interval itself.
+
+It is distinct from the floating-point tolerance that \code{\link[=nsca_thresholds]{nsca_thresholds()}}
+uses to decide whether two computed numbers are equal. That tolerance is
+a numerical matter; this one is substantive.}
 
 \item{geometry.max_overlap}{Largest excess frontier overlap, beyond what a
 step frontier produces by construction, that still counts as acceptable
@@ -99,62 +163,78 @@ geometry.}
 \item{geometry.max_reconstruction}{Largest residual of the area identity
 that still counts as acceptable geometry.}
 
-\item{purity}{Compute the engine's extra purity metrics where it offers
-them. Off by default: the engine computes them only for a corner with
-neither axis flipped, so exactly one side of an NSCA model can ever have
-them, and which side depends on the direction. No NSCA statistic uses
-them, and they are expensive on data with many frontier points.}
+\item{na.action}{How missing values are dropped, as in
+\code{\link[SCAtools:sca_analysis]{SCAtools::sca_analysis()}}. Both sides use the same rule, because a
+necessity effect size and a sufficiency effect size are comparable only
+when both are areas over the same box.}
+
+\item{purity}{Whether to compute the engine's additional purity metrics
+where it offers them. Off by default: the engine computes them only for a
+corner with neither axis flipped, so at most one side of an NSCA model
+can have them, and which side, if any, depends on the direction. No NSCA
+statistic uses them, and they are computationally expensive on data with
+many frontier points.}
 }
 \value{
 An object of class \code{nsca_result}.
 }
 \description{
 Estimates the two empty-space frontiers implied by a
-necessary-and-sufficient statement and assesses them jointly. Sufficiency is delegated to
-\code{\link[SCAtools:sca_analysis]{SCAtools::sca_analysis()}} and necessity to \code{\link[NCA:nca_analysis]{NCA::nca_analysis()}}, on
-diagonally opposite corners of the same scatter plot.
+necessary-and-sufficient statement and assesses them jointly. The
+sufficiency side is estimated by \code{\link[SCAtools:sca_analysis]{SCAtools::sca_analysis()}} and the
+necessity side by \code{\link[NCA:nca_analysis]{NCA::nca_analysis()}}, on diagonally opposite corners of
+the same scatter plot.
 }
 \section{Matched estimation}{
 
-Both sides are always estimated with the same frontier technique, the same
-theoretical scope, the same observations and the same outcome levels. Every
-joint index compares the two empty zones, and a comparison is only
-meaningful when both sides are measured the same way: envelopment frontiers
-hug the data and yield the largest empty areas, while regression frontiers
-cut into them, so mixing techniques across sides would decide which side
-looks weaker by the choice of technique rather than by the evidence.
-Supplying several techniques produces one internally matched row per
-technique, which is the right way to check whether a conclusion survives
-that choice.
+Both sides are estimated with the same frontier technique, the same
+theoretical scope, the same observations and the same outcome levels. Each
+joint index compares the two empty zones, and such a comparison is
+meaningful only when both sides are measured in the same way: envelopment
+frontiers follow the data closely and yield the largest empty areas,
+whereas regression frontiers cut into them, so mixing techniques across
+sides would let the choice of technique, rather than the evidence,
+determine which side appears weaker. Supplying several techniques produces
+one internally matched row per technique, which offers a way to check
+whether a conclusion is robust to that choice.
 }
 
 \section{Degenerate scopes}{
 
-A constant outcome is refused outright when no theoretical scope is given,
-because it has no scope of its own and every empty area would be measured
-against a scope of zero height. With a scope imposed the analysis runs but
-warns, and marks the affected rows \code{degenerate} in \code{\link[=nsca_table]{nsca_table()}}. An axis
-that does not move inside the declared scope makes every reported area a
-property of the scope rather than of the data, and it does so flatteringly:
-a constant outcome at the centre of the scope leaves the upper and lower
-halves both empty, so both components reach 0.5, the admissible region
-closes, and every joint index reports perfect joint support for data
-carrying no information. A milder warning fires when the observations span less than
-five per cent of the declared scope on either axis.
+A constant outcome is refused when no theoretical scope is given, because
+it has no scope of its own and every empty area would be measured against
+a scope of zero height. With a scope imposed, the analysis runs but issues
+a warning and marks the affected rows \code{degenerate} in \code{\link[=nsca_table]{nsca_table()}}. An
+axis that does not vary inside the declared scope makes every reported
+area a property of the scope rather than of the data, and the resulting
+areas overstate the evidence: a constant outcome at the center of the
+scope leaves the upper and lower halves both empty, so both components
+reach 0.5, the admissible region closes, and every joint index reaches its
+maximum for data that carry no information. A milder warning is issued
+when the observations span less than five percent of the declared scope on
+either axis.
 }
 
 \section{The shared permutation sequence}{
 
 \code{shared.test.rep} replaces the engines' two separate permutation runs with
-one sequence that drives both. Each replication shuffles the outcome once,
-refits both engines on that same shuffled frame, and records \code{d_nec},
-\code{d_suf} and their minimum together. This is what makes \code{p_weakest_perm}
-meaningful: the null distribution of a statistic of both components depends
-on how they co-vary under random pairing, and independent permutations
-would destroy exactly that dependence. When it is used, \code{p_nec} and \code{p_suf}
-are taken from the same sequence, the \code{p_source} column reports \code{"shared"},
-and all four p-values are mutually consistent. It costs two engine fits per
-replication, so it is off by default.
+a single sequence used for both. Each replication shuffles the outcome
+once, refits both engines on that same shuffled frame, and records
+\code{d_nec}, \code{d_suf} and their minimum together. This is what makes
+\code{p_weakest_perm} interpretable: the null distribution of a statistic
+involving both components depends on how they co-vary under random
+pairing, and independent permutations would remove that dependence. When
+it is used, \code{p_nec} and \code{p_suf} are taken from the same sequence, the
+\code{p_source} column reports \code{"shared"}, and all five p-values -- \code{p_nec},
+\code{p_suf}, \code{p_nsca_iut}, \code{p_weakest_perm} and \code{p_sum_perm} -- are mutually
+consistent. It requires two engine fits per replication and is therefore
+off by default.
+
+The orderings of the outcome are drawn following the rule NCA uses for its
+own permutation test: when \code{shared.test.rep} is 720 or fewer, all orderings
+are distinct, and a count larger than the \verb{n!} orderings a sample of \code{n}
+has is lowered to \verb{n!}, so that each ordering is used once and the p-values
+are exact.
 }
 
 \examples{
@@ -163,6 +243,15 @@ x <- sort(runif(60))
 dat <- data.frame(X = x, Y = pmin(pmax(x + rnorm(60, 0, 0.1), 0), 1))
 fit <- nsca_analysis(dat, "X", "Y", direction = "HH", ceilings = "ce_fdh")
 fit
+}
+\references{
+Chan, Y. (in press). \emph{From Necessity to Sufficiency and
+Necessity-and-Sufficiency: Extending Condition Analysis in Degree}.
+University of Leeds.
+
+Dul, J. (2016). Necessary Condition Analysis (NCA): Logic and methodology
+of "necessary but not sufficient" causality. \emph{Organizational Research
+Methods}, 19(1), 10-52. \doi{10.1177/1094428115584005}
 }
 \seealso{
 \code{\link[=nsca_table]{nsca_table()}}, \code{\link[=nsca_results]{nsca_results()}}, \code{\link[=nsca_joint]{nsca_joint()}},

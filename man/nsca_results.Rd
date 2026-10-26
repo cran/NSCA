@@ -31,18 +31,21 @@ summary object.
 }
 \description{
 Returns the necessity analysis, the sufficiency analysis, and their joint
-necessary-and-sufficient analysis as three explicit tables. The third does
-not represent an independent third experiment: its \code{p_nsca_iut} is the
-conjunction \code{max(p_nec, p_suf)} and can pass only when both component
-screens pass.
+necessary-and-sufficient analysis as three explicit tables. The third is
+not an independent analysis: its \code{p_nsca_iut} is the conjunction
+\code{max(p_nec, p_suf)} and can pass only when both component tests pass.
 }
 \examples{
 set.seed(1)
 x <- sort(runif(60))
 dat <- data.frame(X = x, Y = pmin(pmax(x + rnorm(60, 0, 0.1), 0), 1))
-fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh")
+# With the two component tests, so that the joint decision can be reached.
+# A report would use 1000 or more permutations.
+fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh",
+                     test.rep = 99, test.seed = 1)
 layers <- nsca_results(fit)
 names(layers)
+layers$necessity
 fit
 summary(fit)
 }

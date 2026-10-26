@@ -2,48 +2,48 @@
 % Please edit documentation in R/results.R
 \name{nsca_reference}
 \alias{nsca_reference}
-\title{Central-tendency reference line}
+\title{Central-tendency reference lines}
 \usage{
-nsca_reference(model, x = NULL)
+nsca_reference(model, x = NULL, line = NULL)
 }
 \arguments{
 \item{model}{An object returned by \code{\link[=nsca_analysis]{nsca_analysis()}}.}
 
 \item{x}{Optional condition names or positions. All conditions by default.}
+
+\item{line}{Which reference lines to report. Defaults to those requested
+when the model was fitted, or to \code{"ols"} if none were requested.}
 }
 \value{
-A data frame with one row per condition: \code{condition}, \code{outcome},
-\code{line}, \code{line_type}, \code{observations}, \code{intercept}, \code{slope}, \code{r_squared}
-and \code{drawn}.
+A data frame with one row per condition and reference line.
 }
 \description{
-Fits the ordinary least-squares regression of the outcome on each condition,
-on the same observations both frontiers were fitted to. This is the line
-\code{lm(y ~ x)} returns, and it is what \code{reference = "ols"} draws on
-\code{\link[=nsca_plot]{nsca_plot()}}.
+Fits the central-tendency lines for each condition, on the same observations
+both frontiers were fitted to. \code{"ols"} is the ordinary least-squares
+regression; \code{"qr"} is a quantile regression at \code{reference.tau}, which
+defaults to \code{0.5} -- the median line, a central-tendency summary that is
+less sensitive to individual observations than the least-squares line.
 }
 \details{
-It is reported apart from \code{\link[=nsca_table]{nsca_table()}} because it is a different kind of
-quantity. Regression describes how the expected outcome moves with the
-condition; the two frontiers describe which condition-outcome combinations
-are absent. Section 6.1 of the condition analysis in degree framework keeps
-the two logics side by side rather than merging them into one number, and
-section 4.3 notes that a frontier is fixed by the most extreme observations
-rather than by the central tendency. A reference line therefore has a slope
-and an intercept but no empty zone, no effect size, no p value, no
-threshold, and no part in the joint-support decision.
+Neither is a component of a condition claim. Both describe how the
+expected outcome changes with the condition; the two frontiers describe
+which condition-outcome combinations are absent. A reference line
+therefore has a slope and an intercept but no empty space, no effect size,
+no permutation p-value and no threshold.
 
-The line is computed on request, so it is available whether or not
-\code{reference = "ols"} was set; \code{drawn} records whether it also appears on the
-plot.
+The computation is delegated to \code{\link[SCAtools:sca_reference]{SCAtools::sca_reference()}} rather than
+reimplemented. The sufficiency layer of an NSCA result is an \code{sca_result}
+fitted to the same observations, so the line computed there is the line
+this package would compute, and a single implementation is maintained.
 }
 \examples{
 set.seed(1)
 x <- sort(runif(60))
 dat <- data.frame(X = x, Y = pmin(pmax(x + rnorm(60, 0, 0.1), 0), 1))
-fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh", reference = "ols")
+fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh",
+                     reference = c("ols", "qr"))
 nsca_reference(fit)
 }
 \seealso{
-\code{\link[=nsca_analysis]{nsca_analysis()}}, \code{\link[=nsca_table]{nsca_table()}}, \code{\link[=nsca_terms]{nsca_terms()}}
+\code{\link[=nsca_analysis]{nsca_analysis()}}, \code{\link[SCAtools:sca_reference]{SCAtools::sca_reference()}}
 }

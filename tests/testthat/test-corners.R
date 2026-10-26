@@ -113,7 +113,7 @@ test_that("the glossary and the legacy map are self-consistent", {
   expect_equal(unname(legacy[["region"]]), "threshold_status")
 
   # The map is the documented one, exactly. NEWS, both READMEs and the package
-  # guide all print this table, and `region` was missing from the code through
+  # guide all print this table, and `region` was missing from the code until
   # 0.4.3 without any of them noticing, so pin the whole set rather than a
   # sample of it.
   expect_setequal(
@@ -121,6 +121,17 @@ test_that("the glossary and the legacy map are self-consistent", {
     c("d_nsca", "j_nsca", "determinacy", "weaker_side", "p_nsca",
       "undetermined_share", "data_zone_share", "data_zone_width",
       "undetermined_width", "nsca_supported", "conjunction", "region",
-      "boundary")
+      "boundary",
+      # 0.5.0
+      "joint_support_status", "joint_empty_zone_coverage", "ceiling")
   )
+
+  # `empty_zone_area` was renamed in 0.5.0 too, but it is deliberately absent
+  # from this map: it belongs to the component tables, which come from SCAtools
+  # and never pass through .nsca_append_legacy(). Listing it here would name a
+  # column that no table served by this map can supply.
+  expect_false("empty_zone_area" %in% names(legacy))
+  expect_equal(unname(legacy[["joint_support_status"]]), "significance_status")
+  expect_equal(unname(legacy[["joint_empty_zone_coverage"]]),
+               "joint_empty_space_coverage")
 })

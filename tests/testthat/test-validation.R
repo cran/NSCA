@@ -27,7 +27,7 @@ test_that("directions are validated", {
   )
 })
 
-test_that("direction input is normalised, not merely accepted", {
+test_that("direction input is normalized, not merely accepted", {
   expect_identical(nsca_corners("  ll  ")$direction, "LL")
   expect_identical(nsca_corners(c("hh", "Lh"))$direction, c("HH", "LH"))
   expect_identical(nsca_corners(factor("HL"))$direction, "HL")
@@ -58,13 +58,13 @@ test_that("ceilings are validated and ols is rejected as a frontier", {
     fit <- nsca_analysis(dat, "X", "Y", ceilings = c("OLS", "ce_fdh")),
     "central-tendency"
   )
-  expect_identical(nsca_table(fit)$ceiling, "ce_fdh")
+  expect_identical(nsca_table(fit)$frontier, "ce_fdh")
 })
 
 test_that("ceiling names are case-insensitive and deduplicated", {
   dat <- validation_data()
   fit <- nsca_analysis(dat, "X", "Y", ceilings = c("CE_FDH", "ce_fdh"))
-  expect_identical(nsca_table(fit)$ceiling, "ce_fdh")
+  expect_identical(nsca_table(fit)$frontier, "ce_fdh")
 })
 
 test_that("a single analysis cannot mix outcome directions", {
@@ -134,7 +134,7 @@ test_that("ols is available as a reference line rather than a frontier", {
   fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh", reference = "ols")
 
   # It changes nothing about the two components.
-  expect_identical(nsca_table(fit)$ceiling, "ce_fdh")
+  expect_identical(nsca_table(fit)$frontier, "ce_fdh")
 
   line <- nsca_reference(fit)
   expected <- stats::coef(stats::lm(Y ~ X, data = dat))
@@ -150,8 +150,16 @@ test_that("ols is available as a reference line rather than a frontier", {
   plain <- nsca_reference(nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh"))
   expect_false(plain$drawn)
   expect_equal(plain$slope, line$slope)
+  # `qr` became a reference line in 0.5.0: at reference.tau it is a quantile
+  # line through the middle of the cloud, which is a central tendency. It is
+  # still a frontier at a high qr.tau, so it belongs to both sets.
+  qr_fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh",
+                          reference = "qr")
+  qr_line <- nsca_reference(qr_fit)
+  expect_identical(qr_line$line, "qr")
+  expect_equal(qr_line$tau, 0.5)
   expect_error(
-    nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh", reference = "qr"),
+    nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh", reference = "loess"),
     "Unknown reference line"
   )
 })
@@ -173,8 +181,8 @@ test_that("a named relevance is reordered as numbers, whatever its type", {
                             relevance = c(sufficiency = 0.2, necessity = 0.1))
   expect_identical(attr(reversed, "nsca")$relevance,
                    c(necessity = 0.1, sufficiency = 0.2))
-  # Before 0.4.5 a character input survived as character, and the support
-  # rule then compared effect sizes with thresholds as strings.
+  # In 0.4.4 and earlier a character input survived as character, and the
+  # support rule then compared effect sizes with thresholds as strings.
   text <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh",
                         relevance = c(necessity = "0.1", sufficiency = "0.2"))
   expect_type(attr(text, "nsca")$relevance, "double")

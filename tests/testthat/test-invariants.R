@@ -23,6 +23,7 @@ directions <- c("HH", "LH", "HL", "LL")
 seeds <- c(101, 202, 303)
 
 test_that("the joint index is bounded by both components everywhere", {
+  skip_on_cran()
   for (seed in seeds) {
     for (shape in c("band", "curved", "noisy")) {
       dat <- random_frame(seed, shape = shape)
@@ -54,7 +55,7 @@ test_that("shares are proportions and the two frontiers account for the scope", 
   for (seed in seeds) {
     dat <- random_frame(seed)
     row <- nsca_table(nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh"))
-    for (column in c("d_nec", "d_suf", "weakest_effect", "joint_empty_zone_coverage",
+    for (column in c("d_nec", "d_suf", "weakest_effect", "joint_empty_space_coverage",
                      "admissible_region_share", "overlap_share")) {
       value <- row[[column]]
       expect_true(is.finite(value), info = column)
@@ -225,22 +226,22 @@ test_that("the convenience wrapper is the analysis with a test attached", {
   expect_equal(row$p_nsca_iut, max(row$p_nec, row$p_suf))
 })
 
-test_that("joint_empty_zone_coverage is the complement of the band and stays in [0, 1]", {
+test_that("joint_empty_space_coverage is the complement of the band and stays in [0, 1]", {
   for (seed in seeds) {
     for (shape in c("band", "curved", "noisy")) {
       dat <- random_frame(seed, shape = shape)
       row <- nsca_table(nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh"))
       label <- paste(seed, shape)
-      expect_equal(row$joint_empty_zone_coverage, 1 - row$admissible_region_share, info = label)
-      expect_gte(row$joint_empty_zone_coverage, -1e-9)
-      expect_lte(row$joint_empty_zone_coverage, 1 + 1e-9)
+      expect_equal(row$joint_empty_space_coverage, 1 - row$admissible_region_share, info = label)
+      expect_gte(row$joint_empty_space_coverage, -1e-9)
+      expect_lte(row$joint_empty_space_coverage, 1 + 1e-9)
     }
   }
 })
 
 test_that("the three summaries order themselves by how they treat curvature", {
   # Y = X, Y = X^3 and Y = X^(1/3) are all exact bijections, so all three are
-  # perfectly necessary and sufficient. joint_empty_zone_coverage must score them alike;
+  # perfectly necessary and sufficient. joint_empty_space_coverage must score them alike;
   # weakest_effect must not, because a lopsided curve really does leave one empty zone
   # small; balanced_joint_effect must sit between the two, which is the whole point of a
   # partially compensatory aggregator. None of the three is wrong: they are
@@ -252,14 +253,14 @@ test_that("the three summaries order themselves by how they treat curvature", {
                              ceilings = "ce_fdh"))
   })
 
-  joint_empty_zone_coverage <- vapply(rows, function(r) r$joint_empty_zone_coverage, numeric(1L))
+  joint_empty_space_coverage <- vapply(rows, function(r) r$joint_empty_space_coverage, numeric(1L))
   smallest <- vapply(rows, function(r) r$weakest_effect, numeric(1L))
   balanced <- vapply(rows, function(r) r$balanced_joint_effect, numeric(1L))
 
   # Every curve closes the band, so every curve shows exact correspondence.
-  expect_true(all(joint_empty_zone_coverage > 0.99), info = paste(round(joint_empty_zone_coverage, 3),
+  expect_true(all(joint_empty_space_coverage > 0.99), info = paste(round(joint_empty_space_coverage, 3),
                                                     collapse = " "))
-  expect_lt(diff(range(joint_empty_zone_coverage)), 0.02)
+  expect_lt(diff(range(joint_empty_space_coverage)), 0.02)
 
   # The minimum, by contrast, separates them sharply by curvature.
   expect_gt(smallest[["linear"]], 0.45)
@@ -276,32 +277,32 @@ test_that("the three summaries order themselves by how they treat curvature", {
     # and have no `info` argument, so passing one is an error rather than an
     # annotation.
     expect_gte(balanced[[name]], 2 * smallest[[name]] - 1e-9, label = name)
-    expect_lte(balanced[[name]], joint_empty_zone_coverage[[name]] + 0.05,
+    expect_lte(balanced[[name]], joint_empty_space_coverage[[name]] + 0.05,
                label = name)
   }
   expect_gt(balanced[["convex"]], 0.75)
-  expect_lt(balanced[["convex"]], joint_empty_zone_coverage[["convex"]] - 0.02)
+  expect_lt(balanced[["convex"]], joint_empty_space_coverage[["convex"]] - 0.02)
   expect_gt(balanced[["linear"]], balanced[["convex"]])
 })
 
-test_that("joint_empty_zone_coverage is inflated at the low end, which is why nothing is quoted alone", {
-  # A loose scatter scores an order of magnitude higher on joint_empty_zone_coverage than on
-  # weakest_effect. Reporting joint_empty_zone_coverage as the effect size would present that as a
+test_that("joint_empty_space_coverage is inflated at the low end, which is why nothing is quoted alone", {
+  # A loose scatter scores an order of magnitude higher on joint_empty_space_coverage than on
+  # weakest_effect. Reporting joint_empty_space_coverage as the effect size would present that as a
   # moderate result; reporting weakest_effect alone understates a deterministic but
   # lopsided relation. That is the case for reporting all of them.
   dat <- random_frame(101, shape = "noisy")
   row <- nsca_table(nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh"))
-  expect_gt(row$joint_empty_zone_coverage, row$weakest_effect)
-  expect_gt(row$joint_empty_zone_coverage / max(row$weakest_effect, 1e-6), 3)
-  # joint_empty_zone_coverage is roughly the component sum, and the geometric mean can never
+  expect_gt(row$joint_empty_space_coverage, row$weakest_effect)
+  expect_gt(row$joint_empty_space_coverage / max(row$weakest_effect, 1e-6), 3)
+  # joint_empty_space_coverage is roughly the component sum, and the geometric mean can never
   # exceed that sum. It can come arbitrarily close to it when the two
   # components are balanced, so this is the bound that actually holds; a strict
-  # inequality between the two would be an artefact of one fixture.
+  # inequality between the two would be an artifact of one fixture.
   expect_lte(row$balanced_joint_effect, row$d_nec + row$d_suf + 1e-12)
 })
 
 test_that("a constant outcome fools every index and is caught by the flag and the screen", {
-  # The band closes completely for a constant outcome placed at the centre of
+  # The band closes completely for a constant outcome placed at the center of
   # an imposed scope, so all three summaries report perfect joint support
   # for data with no information in it. This is the documented blind spot they
   # share. Two things cover it: the degeneracy flag and the permutation
@@ -312,7 +313,7 @@ test_that("a constant outcome fools every index and is caught by the flag and th
   ))
   row <- nsca_table(fit)
 
-  expect_gt(row$joint_empty_zone_coverage, 0.99)          # every index is fooled
+  expect_gt(row$joint_empty_space_coverage, 0.99)          # every index is fooled
   expect_gt(row$balanced_joint_effect, 0.99)
   expect_gt(row$weakest_effect, 0.49)
   expect_true(row$degenerate)               # the flag is not
@@ -321,7 +322,7 @@ test_that("a constant outcome fools every index and is caught by the flag and th
   expect_false(isTRUE(row$nsca_significant))
 })
 
-test_that("balanced_joint_effect penalises asymmetry at a fixed sum", {
+test_that("balanced_joint_effect penalizes asymmetry at a fixed sum", {
   # The substantive claim behind choosing p = 0 over p = 1. Two datasets with
   # nearly the same component sum but very different balance must not receive
   # the same joint strength, and the balanced one must score higher.

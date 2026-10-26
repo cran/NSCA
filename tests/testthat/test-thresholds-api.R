@@ -2,7 +2,7 @@
 #
 # The gap between the two thresholds is the only place the package reports a
 # quantity whose sign carries meaning. A negative gap means the frontiers have
-# crossed at that outcome level, which is a modelling problem rather than a
+# crossed at that outcome level, which is a modeling problem rather than a
 # narrow admissible interval; clamping it to zero, as an earlier version did,
 # would present the failure as a perfect result.
 
@@ -43,7 +43,7 @@ test_that("compatibility, threshold_status and the gap tell the same story", {
   finite <- is.finite(rules$threshold_gap_actual)
 
   # A row flagged incompatible must have a real overlap behind it, and must be
-  # labelled as such rather than passed off as a narrow admissible interval.
+  # labeled as such rather than passed off as a narrow admissible interval.
   incompatible <- finite & !rules$thresholds_compatible
   if (any(incompatible)) {
     expect_true(all(rules$overlap_width[incompatible] > 0))
@@ -169,14 +169,14 @@ test_that("a specific frontier and condition can be selected", {
 
   expect_setequal(nsca_thresholds(fit)$condition, c("X1", "X2"))
   expect_identical(unique(nsca_thresholds(fit, x = "X2")$condition), "X2")
-  expect_identical(unique(nsca_thresholds(fit, ceiling = "cr_fdh")$ceiling),
+  expect_identical(unique(nsca_thresholds(fit, ceiling = "cr_fdh")$frontier),
                    "cr_fdh")
   # The default frontier is the first that was requested.
-  expect_identical(unique(nsca_thresholds(fit)$ceiling), "ce_fdh")
+  expect_identical(unique(nsca_thresholds(fit)$frontier), "ce_fdh")
 })
 
 test_that("the row-level gap and the scope-level band agree in direction", {
-  # admissible_region_share summarises the same geometry the per-row widths
+  # admissible_region_share summarizes the same geometry the per-row widths
   # describe, so a tighter relation must shrink both.
   tight <- nsca_analysis(th_data(noise = 0.03), "X", "Y", ceilings = "ce_fdh",
                          steps = 8)

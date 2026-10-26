@@ -15,12 +15,14 @@
 
 # Corner numbering follows SCAtools: 1 upper-left, 2 upper-right,
 # 3 lower-left, 4 lower-right.
+#
+# The two are kept side by side deliberately, because the diagonal relationship
+# between them is the whole content of this file and it is legible only when
+# both are visible. The sufficiency row must agree with
+# SCAtools::sca_corner(); a test pins that, rather than a second lookup
+# derived at build time from a package that is loaded lazily.
 .nsca_sufficiency_corner <- c(HH = 4L, LH = 3L, HL = 2L, LL = 1L)
 .nsca_necessity_corner <- c(HH = 1L, LH = 2L, HL = 3L, LL = 4L)
-.nsca_corner_location <- c(
-  `1` = "upper-left", `2` = "upper-right",
-  `3` = "lower-left", `4` = "lower-right"
-)
 
 # An empty corner at the top means the frontier bounds the data from above.
 .nsca_corner_side <- function(corner) {
@@ -29,82 +31,37 @@
 
 # Vocabulary of condition analysis in degree, section 3.2 and Table 1.
 #
-# A boundary is the theoretical line separating an expected empty space from
-# the compatible region; a frontier is that boundary estimated from data;
-# ceiling and floor name the direction in which Y is bounded. A boundary that
-# bounds from above is a ceiling, one that bounds from below a floor, so the
-# type follows the empty corner and nothing else.
+# The corner-to-wording maps used to live here as well, character for character
+# identical to SCAtools' copies. Two copies of one lookup table is two places
+# to fix, and they had already drifted: the upper-case-Y substitution fault
+# existed twice over, and the warning on the rounded-text fallback existed in
+# one package and not the other. Since 0.5.0 SCAtools owns the vocabulary and
+# exports it, and the four helpers below delegate.
+#
+# The delegation is by :: rather than ::: on purpose. Reaching into another
+# package's internals is flagged by R CMD check and would make this file depend
+# on names SCAtools is free to change; the exported functions are a stated
+# interface between the two packages.
 #
 # Table 1 read through these corners: necessity uses a ceiling exactly when the
 # outcome level is high (HH, LH) and a floor when it is low (HL, LL);
 # sufficiency, sitting on the diagonally opposite corner, is the reverse.
-.nsca_corner_boundary <- c(
-  `1` = "ceiling", `2` = "ceiling", `3` = "floor", `4` = "floor"
-)
-
-# What each expected empty space contains, in the wording of Table 1.
-.nsca_corner_empty_space <- c(
-  `1` = "Low X with high Y",
-  `2` = "High X with high Y",
-  `3` = "Low X with low Y",
-  `4` = "High X with low Y"
-)
-
-# The direction stated as a relationship between X and Y, as in Table 1. This
-# is a claim about the theorised relationship, not about the shape of the
-# estimated frontier, which may be a step function or a straight line under any
-# of the four types.
-.nsca_relationship <- c(
-  HH = "Higher X for higher Y",
-  LH = "Lower X for higher Y",
-  HL = "Higher X for lower Y",
-  LL = "Lower X for lower Y"
-)
 
 .nsca_boundary_type <- function(corner) {
-  unname(.nsca_corner_boundary[as.character(corner)])
+  SCAtools::sca_boundary_type(corner)
 }
 
 # Fill the variable names into the Table 1 wording.
 .nsca_empty_space_text <- function(corner, x = "X", y = "Y") {
-  text <- unname(.nsca_corner_empty_space[as.character(corner)])
-  text <- sub("X", x, text, fixed = TRUE)
-  sub("Y", y, text, fixed = TRUE)
+  SCAtools::sca_empty_space(corner, x, y)
 }
 
 .nsca_relationship_text <- function(direction, x = "X", y = "Y") {
-  text <- unname(.nsca_relationship[direction])
-  text <- sub("X", x, text, fixed = TRUE)
-  sub("Y", y, text, fixed = TRUE)
+  SCAtools::sca_relationship(direction, x, y)
 }
 
 .nsca_validate_direction <- function(direction, n = length(direction)) {
-  if (is.factor(direction)) {
-    direction <- as.character(direction)
-  }
-  if (!is.character(direction) || length(direction) == 0L || anyNA(direction)) {
-    stop("'direction' must contain one or more of: HH, LH, HL, LL.",
-         call. = FALSE)
-  }
-  direction <- toupper(trimws(direction))
-  if (length(direction) == 1L && n > 1L) {
-    direction <- rep(direction, n)
-  }
-  if (length(direction) != n) {
-    stop("'direction' must have length 1 or the same length as 'x'.",
-         call. = FALSE)
-  }
-  invalid <- setdiff(unique(direction), .nsca_directions)
-  if (length(invalid) > 0L) {
-    stop(
-      sprintf(
-        "Invalid direction(s): %s. Use HH, LH, HL, or LL; the first letter refers to X and the second to Y.",
-        paste(invalid, collapse = ", ")
-      ),
-      call. = FALSE
-    )
-  }
-  direction
+  SCAtools::sca_check_direction(direction, n)
 }
 
 .nsca_level <- function(letter) ifelse(letter == "H", "High", "Low")
@@ -138,9 +95,9 @@
 
 #' Empty corners of a necessary-and-sufficient statement
 #'
-#' Returns the two physically empty scatter-plot corners implied by a
-#' necessary-and-sufficient statement. The necessity corner is always the
-#' diagonal opposite of the sufficiency corner.
+#' Returns the two scatter-plot corners that a necessary-and-sufficient
+#' statement implies are empty. For each direction, the necessity corner is
+#' diagonally opposite the sufficiency corner.
 #'
 #' @param direction One or more of `"HH"`, `"LH"`, `"HL"`, `"LL"`. The first
 #'   letter refers to the level of the condition and the second to the level of
@@ -158,19 +115,15 @@ nsca_corners <- function(direction = "HH") {
   data.frame(
     direction = direction,
     nsca_number = unname(.nsca_direction_number[direction]),
-    relationship = unname(.nsca_relationship[direction]),
+    relationship = .nsca_relationship_text(direction),
     necessity_corner = necessity,
-    necessity_location = unname(.nsca_corner_location[as.character(necessity)]),
-    necessity_empty_space = unname(
-      .nsca_corner_empty_space[as.character(necessity)]
-    ),
+    necessity_location = SCAtools::sca_corner_location(necessity),
+    necessity_empty_space = .nsca_empty_space_text(necessity),
     necessity_boundary = .nsca_boundary_type(necessity),
     necessity_bound = .nsca_corner_side(necessity),
     sufficiency_corner = sufficiency,
-    sufficiency_location = unname(.nsca_corner_location[as.character(sufficiency)]),
-    sufficiency_empty_space = unname(
-      .nsca_corner_empty_space[as.character(sufficiency)]
-    ),
+    sufficiency_location = SCAtools::sca_corner_location(sufficiency),
+    sufficiency_empty_space = .nsca_empty_space_text(sufficiency),
     sufficiency_boundary = .nsca_boundary_type(sufficiency),
     sufficiency_bound = .nsca_corner_side(sufficiency),
     stringsAsFactors = FALSE,
@@ -185,16 +138,20 @@ nsca_corners <- function(direction = "HH") {
 #' expected empty space and boundary each implies for necessity and for
 #' sufficiency, and adds the corner numbering the frontier engines use.
 #'
-#' The direction is a claim about the theorised relationship, not about the
+#' The direction is a claim about the theorized relationship, not about the
 #' shape of the estimated frontier, which may be a step function or a straight
 #' line under any of the four types. Theory may instead posit a curvilinear or
 #' U-shaped relationship, for which the expected empty space is no longer a
-#' single corner; those are outside the scope of this package.
+#' single corner; such relationships are outside the scope of this package.
 #'
 #' @return A data frame describing all four necessary-and-sufficient
-#'   directions. The `biconditional` column keeps its name: it is the joint
-#'   statement written out, and the short logical word is the more usable
-#'   column name.
+#'   directions. The `biconditional` column retains this name because it
+#'   contains the joint statement written out in full, and the shorter logical
+#'   term is more convenient as a column name.
+#' @references
+#' Chan, Y. (in press). *From Necessity to Sufficiency and
+#' Necessity-and-Sufficiency: Extending Condition Analysis in Degree*.
+#' University of Leeds.
 #' @seealso [nsca_corners()], [nsca_terms()]
 #' @export
 #' @examples
@@ -205,7 +162,7 @@ nsca_direction_map <- function() {
   data.frame(
     nsca_number = unname(.nsca_direction_number[direction]),
     direction = direction,
-    relationship = unname(.nsca_relationship[direction]),
+    relationship = .nsca_relationship_text(direction),
     equivalence_class = unname(.nsca_equivalence_class[direction]),
     # Column name kept: `biconditional` is the concise logical term for the
     # joint statement. The prose everywhere else says necessary-and-sufficient.

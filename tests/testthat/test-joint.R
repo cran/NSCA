@@ -33,7 +33,7 @@ test_that("the family is monotone in p, which is what makes p a dial", {
 
 test_that("a zero component annihilates every non-compensatory member", {
   # Raising zero to a negative power gives Inf, and the mean would come back
-  # NaN. A joint_support_status with a dead half is zero, not missing.
+  # NaN. A significance_status with a dead half is zero, not missing.
   for (p in c(-Inf, -3, -1, 0)) {
     expect_equal(nsca_joint(0, 0.5, p = p, normalize = FALSE), 0, info = p)
     expect_equal(nsca_joint(0.5, 0, p = p, normalize = FALSE), 0, info = p)
@@ -60,7 +60,7 @@ test_that("doubling maps the index onto [0, 1] and reaches 1 only at the line", 
   expect_equal(unname(unlist(top)), c(0.5, 0.5), tolerance = 1e-9)
 })
 
-test_that("asymmetry is penalised at a fixed sum", {
+test_that("asymmetry is penalized at a fixed sum", {
   # The substantive difference from the sum, stated as a number rather than as
   # a preference. Both pairs sum to 0.80.
   expect_equal(nsca_joint(0.40, 0.40), 0.80)
@@ -89,7 +89,7 @@ test_that("arguments are recycled and the degree is validated", {
   expect_equal(nsca_joint(numeric(0L), 0.4), numeric(0L))
   expect_error(nsca_joint(0.4, 0.4, p = c(0, 1)), "single number")
   expect_error(nsca_joint(0.4, 0.4, p = NA), "single number")
-  # Above p = 1 the normalisation guarantee no longer holds, so it says so
+  # Above p = 1 the normalization guarantee no longer holds, so it says so
   # instead of quietly returning a number above 1.
   expect_warning(nsca_joint(0.5, 0.5, p = 2), "p <= 1")
 })

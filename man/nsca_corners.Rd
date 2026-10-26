@@ -16,9 +16,9 @@ A data frame with the necessity and sufficiency corners and the side
 of the point cloud each frontier bounds.
 }
 \description{
-Returns the two physically empty scatter-plot corners implied by a
-necessary-and-sufficient statement. The necessity corner is always the
-diagonal opposite of the sufficiency corner.
+Returns the two scatter-plot corners that a necessary-and-sufficient
+statement implies are empty. For each direction, the necessity corner is
+diagonally opposite the sufficiency corner.
 }
 \examples{
 nsca_corners("HH")

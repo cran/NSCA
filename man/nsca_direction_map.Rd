@@ -8,9 +8,9 @@ nsca_direction_map()
 }
 \value{
 A data frame describing all four necessary-and-sufficient
-directions. The \code{biconditional} column keeps its name: it is the joint
-statement written out, and the short logical word is the more usable
-column name.
+directions. The \code{biconditional} column retains this name because it
+contains the joint statement written out in full, and the shorter logical
+term is more convenient as a column name.
 }
 \description{
 Reproduces Table 1 of the condition analysis in degree framework, which sets
@@ -19,14 +19,19 @@ expected empty space and boundary each implies for necessity and for
 sufficiency, and adds the corner numbering the frontier engines use.
 }
 \details{
-The direction is a claim about the theorised relationship, not about the
+The direction is a claim about the theorized relationship, not about the
 shape of the estimated frontier, which may be a step function or a straight
 line under any of the four types. Theory may instead posit a curvilinear or
 U-shaped relationship, for which the expected empty space is no longer a
-single corner; those are outside the scope of this package.
+single corner; such relationships are outside the scope of this package.
 }
 \examples{
 nsca_direction_map()
+}
+\references{
+Chan, Y. (in press). \emph{From Necessity to Sufficiency and
+Necessity-and-Sufficiency: Extending Condition Analysis in Degree}.
+University of Leeds.
 }
 \seealso{
 \code{\link[=nsca_corners]{nsca_corners()}}, \code{\link[=nsca_terms]{nsca_terms()}}

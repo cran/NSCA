@@ -2,7 +2,8 @@ library(NSCA)
 
 set.seed(42)
 
-# A relation that is close to deterministic: both components should hold.
+# A relationship that is close to deterministic, in which both components are
+# expected to hold.
 n <- 120
 x <- sort(runif(n))
 tight <- data.frame(X = x, Y = pmin(pmax(x + rnorm(n, 0, 0.08), 0), 1))
@@ -18,22 +19,25 @@ fit                      # NCA, SCA, and joint NSCA results
 summary(fit)
 nsca_plot(fit)           # both frontiers, all techniques, band shaded
 
-# Dual thresholds: what is out of reach, admitted, or guaranteed.
+# Dual thresholds: the X ranges in which an outcome level is unattainable,
+# possible, or guaranteed.
 nsca_thresholds(fit, ceiling = "ce_fdh")
 nsca_thresholds(fit, ceiling = "ce_fdh", scale = "percentile")
 
-# Loosen the relation and watch the three summaries move together but not
-# alike. All are retained because they answer different questions.
+# As the relationship is loosened, the three summaries change in the same
+# direction but not by the same amount. All three are retained because they
+# address different questions.
 for (w in c(0.05, 0.20, 0.40)) {
   noisy <- data.frame(X = x, Y = pmin(pmax(x + runif(n, -w, w), 0), 1))
   row <- nsca_table(nsca_analysis(noisy, "X", "Y", ceilings = "ce_fdh"))
   cat(sprintf(
-    "noise %.2f:  weakest_effect = %.3f  balanced_joint_effect = %.3f  joint_empty_zone_coverage = %.3f\n",
-    w, row$weakest_effect, row$balanced_joint_effect, row$joint_empty_zone_coverage
+    "noise %.2f:  weakest_effect = %.3f  balanced_joint_effect = %.3f  joint_empty_space_coverage = %.3f\n",
+    w, row$weakest_effect, row$balanced_joint_effect, row$joint_empty_space_coverage
   ))
 }
 
-# The identity every area quantity follows, and the residual that checks it.
+# The identity that all area quantities satisfy, and the residual used to
+# check it.
 row <- nsca_table(fit)[1L, ]
 cat(sprintf(
   "\nidentity: 1 - d_nec - d_suf + O = %.6f   admissible_region_share = %.6f\n",
@@ -42,7 +46,8 @@ cat(sprintf(
 cat(sprintf("reconstruction_error = %.2e   geometry_acceptable = %s\n",
             row$reconstruction_error, row$geometry_acceptable))
 
-# The bounds are equalities for a perfect diagonal, not merely upper limits.
+# For a perfect diagonal, the bounds hold with equality rather than only as
+# upper limits.
 for (nn in c(20L, 40L, 200L)) {
   d <- nsca_table(nsca_analysis(
     data.frame(X = seq(0, 1, length.out = nn), Y = seq(0, 1, length.out = nn)),
@@ -56,9 +61,9 @@ for (nn in c(20L, 40L, 200L)) {
   ))
 }
 
-# The shared permutation sequence, and the support decision. One shuffle per
-# replication drives both engines, so p_weakest_perm has a null distribution a
-# dataset could actually have produced.
+# The shared permutation sequence and the support decision. Both engines use
+# the same shuffle in each replication, so the null distribution behind
+# p_weakest_perm consists of values that a single dataset could produce.
 shared <- nsca_analysis(
   tight, "X", "Y", ceilings = "ce_fdh",
   shared.test.rep = 199, shared.seed = 1,
@@ -70,33 +75,34 @@ print(nsca_table(shared)[c(
   "joint_support"
 )])
 
-# p_weakest_perm is a sensitivity analysis, not a replacement for the
-# intersection-union rule: its null is random pairing alone, which is a proper
-# subset of the union null "not necessary or not sufficient".
+# p_weakest_perm serves as a sensitivity analysis rather than as a replacement
+# for the intersection-union rule: its null hypothesis is random pairing alone,
+# which is a proper subset of the union null "not necessary or not sufficient".
 
-# Old column names still lead somewhere.
+# Retired column names remain available.
 print(nsca_legacy_names())
 legacy <- nsca_table(fit, legacy = TRUE)
 stopifnot(identical(legacy$d_nsca, legacy$weakest_effect))
 
-# Curvature is where they part company. All three curves below are exact
-# bijections, so all three are perfectly necessary and sufficient. joint_empty_zone_coverage
-# says so; the other two report how lopsided the two empty zones are.
+# The three summaries differ under curvature. Each curve below is an exact
+# bijection, so each is perfectly necessary and sufficient.
+# joint_empty_space_coverage reflects this; the other two summaries indicate how
+# unequal the two empty spaces are.
 grid <- seq(0.001, 1, length.out = 200)
 for (power in c(1, 2, 3, 4)) {
   row <- nsca_table(nsca_analysis(
     data.frame(X = grid, Y = grid^power), "X", "Y", ceilings = "ce_fdh"
   ))
   cat(sprintf(
-    "Y = X^%d:  d_nec = %.3f  d_suf = %.3f  weakest_effect = %.3f  balanced_joint_effect = %.3f  joint_empty_zone_coverage = %.3f\n",
-    power, row$d_nec, row$d_suf, row$weakest_effect, row$balanced_joint_effect, row$joint_empty_zone_coverage
+    "Y = X^%d:  d_nec = %.3f  d_suf = %.3f  weakest_effect = %.3f  balanced_joint_effect = %.3f  joint_empty_space_coverage = %.3f\n",
+    power, row$d_nec, row$d_suf, row$weakest_effect, row$balanced_joint_effect, row$joint_empty_space_coverage
   ))
 }
 
-# The same two components under every degree of compensation. p = -Inf is the
-# minimum, p = 0 the geometric mean, p = 1 half the sum. The sum cannot tell a
-# balanced pair from a one-sided one; that is the objection to it, and it is an
-# objection about degree, not about kind.
+# The same two components under different degrees of compensation. p = -Inf
+# gives the minimum, p = 0 the geometric mean and p = 1 half the sum. The sum
+# does not distinguish a balanced pair from a one-sided one; this is the
+# objection to it, and it concerns degree rather than kind.
 for (p in c(-Inf, -1, 0, 1)) {
   cat(sprintf(
     "p = %5s:  (0.40, 0.40) -> %.3f    (0.70, 0.10) -> %.3f\n",
@@ -104,28 +110,29 @@ for (p in c(-Inf, -1, 0, 1)) {
   ))
 }
 
-# A constant outcome is refused rather than scored: it has no scope of its own.
+# A constant outcome is rejected with an error rather than scored, because it
+# has no scope of its own.
 flat <- data.frame(X = seq(0, 1, length.out = 60), Y = rep(0.5, 60))
 try(nsca_analysis(flat, "X", "Y", ceilings = "ce_fdh"))
 
-# With a scope imposed it runs, but it warns and is flagged degenerate, because
-# an uninformative line at the centre of the scope maximises every index at
-# once. Move the same line off centre and the answer changes, although nothing
-# about the data did.
+# With an imposed scope, the analysis runs, but it issues a warning and is
+# flagged as degenerate, because an uninformative line at the center of the
+# scope maximizes every index simultaneously. When the same line is moved off
+# center, the result changes, although the data are equally uninformative.
 nsca_table(suppressWarnings(nsca_analysis(
   flat, "X", "Y", ceilings = "ce_fdh", scope = c(0, 1, 0, 1)
-)))[c("d_nec", "d_suf", "weakest_effect", "balanced_joint_effect", "joint_empty_zone_coverage", "degenerate")]
+)))[c("d_nec", "d_suf", "weakest_effect", "balanced_joint_effect", "joint_empty_space_coverage", "degenerate")]
 low <- data.frame(X = flat$X, Y = rep(0.02, 60))
 nsca_table(suppressWarnings(nsca_analysis(
   low, "X", "Y", ceilings = "ce_fdh", scope = c(0, 1, 0, 1)
-)))[c("d_nec", "d_suf", "weakest_effect", "balanced_joint_effect", "joint_empty_zone_coverage", "degenerate")]
+)))[c("d_nec", "d_suf", "weakest_effect", "balanced_joint_effect", "joint_empty_space_coverage", "degenerate")]
 
-# The other horizontal line: a flat frontier over a filled scope. No empty zone
-# on either side, so every index is at its floor and nothing is flagged.
+# The other horizontal case: a flat frontier over a filled scope. Neither side
+# has an empty space, so each index is at its floor and nothing is flagged.
 set.seed(11)
 filled <- data.frame(X = runif(400), Y = runif(400))
 nsca_table(nsca_analysis(filled, "X", "Y", ceilings = "ce_fdh"))[
-  c("d_nec", "d_suf", "weakest_effect", "balanced_joint_effect", "joint_empty_zone_coverage", "degenerate")
+  c("d_nec", "d_suf", "weakest_effect", "balanced_joint_effect", "joint_empty_space_coverage", "degenerate")
 ]
 
 # The corner mapping, for reference.

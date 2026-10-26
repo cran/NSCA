@@ -1,0 +1,16 @@
+only necessity holds (d_nec = 0.245, d_suf = 0) 
+  n d_nec_declared d_suf_declared power_necessity power_sufficiency power_joint
+ 30          0.245              0           0.945             0.165       0.165
+ 60          0.245              0           1.000             0.215       0.215
+ power_weakest_perm power_sum_perm
+               0.21           0.88
+               0.26           1.00
+
+only sufficiency holds (d_nec = 0, d_suf = 0.245) 
+  n d_nec_declared d_suf_declared power_necessity power_sufficiency power_joint
+ 30              0          0.245            0.23             0.955       0.225
+ 60              0          0.245            0.26             1.000       0.260
+ power_weakest_perm power_sum_perm
+              0.275          0.885
+              0.300          0.995
+

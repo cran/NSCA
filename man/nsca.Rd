@@ -9,9 +9,10 @@ nsca(
   x,
   y,
   direction = "HH",
-  ceilings = "ce_fdh",
+  ceilings = c("ce_fdh", "cr_fdh"),
   reference = NULL,
-  test.rep = 1000
+  test.rep = 1000,
+  test.seed = NULL
 )
 }
 \arguments{
@@ -22,37 +23,60 @@ nsca(
 \item{y}{A single outcome column.}
 
 \item{direction}{Necessary-and-sufficient direction(s): \code{"HH"}, \code{"LH"},
-\code{"HL"}, or
-\code{"LL"}. The first letter is the condition level and the second the outcome
-level.}
+\code{"HL"}, or \code{"LL"}. The first letter is the condition level and the second
+the outcome level.}
 
 \item{ceilings}{One or more empty-space frontier techniques, applied
-identically to both sides. \code{"ols"} is rejected here because it estimates
-central tendency rather than an empty space; pass it as \code{reference}
-instead.}
+identically to both sides. \code{"ols"} is not accepted here because it
+estimates central tendency rather than an empty space; it can be supplied
+as \code{reference} instead.}
 
 \item{reference}{Central-tendency lines drawn beside the two frontiers for
 comparison, or \code{NULL} for none. \code{"ols"} is the ordinary least-squares
 regression of the outcome on the condition, fitted to all the data. It is
-an average-effect summary, enters no joint index, no threshold and no
-support decision, and is reported by \code{\link[=nsca_reference]{nsca_reference()}}.}
+an average-effect summary; it does not enter any joint index, threshold
+or support decision, and is reported by \code{\link[=nsca_reference]{nsca_reference()}}.}
 
 \item{test.rep}{Number of permutation resamples for the engines' own
-component tests. Zero skips testing, and without it no joint-support verdict
-can be reached.}
+component tests. Zero skips testing, in which case no joint-support
+decision can be reached. The p-value cannot fall below \code{1 / test.rep},
+nor below \verb{1 / n!} for a sample of \code{n} observations, so a count or a
+sample too small to reach \code{test.p_threshold} is reported with a warning.}
+
+\item{test.seed}{Optional seed for the two component permutation tests, so
+that \code{p_nec}, \code{p_suf} and therefore \code{p_nsca_iut} and \code{joint_support} are
+reproducible. The caller's random stream is restored afterward.
+
+A single seed yields two sequences. The two components are tested on two
+independent shuffles, and seeding both engines with the same number
+would give them the same sequence, that is, the shared-sequence design
+obtained unintentionally and without the bookkeeping that makes it
+interpretable. The seed given here is therefore used once, to draw two
+component seeds; \code{shared.test.rep} and \code{shared.seed} remain the way to
+request a single sequence explicitly.}
 }
 \value{
 An object of class \code{nsca_result}.
 }
 \description{
-A thin wrapper over \code{\link[=nsca_analysis]{nsca_analysis()}} with a permutation test attached.
+A convenience wrapper around \code{\link[=nsca_analysis]{nsca_analysis()}} that also runs the
+permutation tests.
+}
+\details{
+Because the tests run by default, we suggest supplying \code{test.seed} so that
+the p-values are reproducible. An unseeded permutation test draws its seed
+from the clock and reports a different p-value on each run, which makes
+the value unsuitable for reporting; the \code{Settings} block states whether a
+seed was fixed and, if it was not, adds a note that the p-values may
+differ on the next run.
 }
 \examples{
 set.seed(1)
 x <- sort(runif(60))
 dat <- data.frame(X = x, Y = pmin(pmax(x + rnorm(60, 0, 0.1), 0), 1))
 \donttest{
-# The default 1000 permutations take several seconds.
+# The default 1000 permutations take longer than an example should;
+# nsca_analysis() runs none unless asked.
 nsca(dat, "X", "Y")
 }
 }

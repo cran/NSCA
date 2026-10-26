@@ -149,6 +149,7 @@ test_that("several techniques may be drawn even though they may not be mixed", {
   expect_equal(length(unique(built$group)), 6L)
   expect_equal(length(unique(built$colour)), 2L)
   expect_identical(p$labels$colour, "Component")
+  # Matches the `frontier` column of the tables.
   expect_identical(p$labels$linetype, "Frontier")
 
   # A subset may be drawn, and only the requested ones appear.

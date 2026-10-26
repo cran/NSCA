@@ -1,0 +1,25 @@
+A both corners equally empty, d = 0.165 
+  n d_nec_declared d_suf_declared power_necessity power_sufficiency power_joint
+ 15          0.165          0.165            0.74              0.77        0.61
+ 30          0.165          0.165            0.98              0.97        0.96
+ power_weakest_perm power_sum_perm
+               0.93           0.89
+               0.99           1.00
+
+B one corner clearly empty, the other barely: d = 0.245 and 0.011 
+  n d_nec_declared d_suf_declared power_necessity power_sufficiency power_joint
+ 15          0.245          0.011            0.57              0.25        0.21
+ 30          0.245          0.011            0.96              0.29        0.29
+ power_weakest_perm power_sum_perm
+               0.28           0.49
+               0.41           0.92
+
+C both corners moderately empty, d = 0.10 
+  n d_nec_declared d_suf_declared power_necessity power_sufficiency power_joint
+ 15            0.1            0.1            0.41              0.43        0.26
+ 30            0.1            0.1            0.76              0.74        0.58
+ power_weakest_perm power_sum_perm
+               0.58           0.51
+               0.94           0.92
+
+Monte Carlo SE of a rate near 0.5 with 100 replications: about 0.05

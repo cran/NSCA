@@ -13,9 +13,10 @@ nsca_extract(model, x = NULL, ceiling = NULL, param = "weakest_effect")
 
 \item{ceiling}{Frontier technique. Defaults to the first requested.}
 
-\item{param}{A column of \code{\link[=nsca_table]{nsca_table()}}, one of the retired names in
-\code{\link[=nsca_legacy_names]{nsca_legacy_names()}}, or a parameter name understood by the underlying
-engines, prefixed with \code{"nec:"} or \code{"suf:"}.}
+\item{param}{A column of \code{\link[=nsca_table]{nsca_table()}}, or a parameter name understood by
+the underlying engines, prefixed with \code{"nec:"} or \code{"suf:"}. Retired column
+names, listed by \code{\link[=nsca_legacy_names]{nsca_legacy_names()}}, are rejected with an error that
+names their replacement.}
 }
 \value{
 The selected value.
@@ -30,6 +31,7 @@ dat <- data.frame(X = x, Y = pmin(pmax(x + rnorm(60, 0, 0.1), 0), 1))
 fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh")
 nsca_extract(fit, param = "weakest_effect")
 nsca_extract(fit, param = "nec:Ceiling accuracy")
+nsca_extract(fit, param = "suf:Effect size")
 }
 \seealso{
 \code{\link[=nsca_table]{nsca_table()}}, \code{\link[=nsca_legacy_names]{nsca_legacy_names()}}

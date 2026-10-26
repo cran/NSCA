@@ -42,7 +42,11 @@ test_that("every retired name still leads to its replacement", {
   map <- nsca_legacy_names()
 
   # Every replacement exists somewhere, and no retired name is still in use.
-  live <- union(names(joint), names(rules))
+  # The component tables count as "somewhere": they are produced by NSCA too,
+  # even though .nsca_append_legacy() does not serve them.
+  layers <- nsca_results(fit)
+  live <- Reduce(union, list(names(joint), names(rules),
+                             names(layers$necessity), names(layers$sufficiency)))
   expect_gt(length(map), 0L)
   expect_true(all(map %in% live))
   expect_false(any(names(map) %in% live))
@@ -68,26 +72,23 @@ test_that("every retired name still leads to its replacement", {
   }
 })
 
-test_that("nsca_extract() routes retired names to the right explanation", {
+test_that("nsca_extract() refuses every retired name and names its replacement", {
   fit <- nsca_analysis(decision_data(), "X", "Y", ceilings = "ce_fdh",
                        test.rep = 100)
-  joint <- nsca_table(fit)
   map <- nsca_legacy_names()
 
+  # 0.5.0 changed the policy. Retired names used to be accepted with a warning,
+  # which worked for joint-table names and could not work for dual-threshold
+  # names -- those are defined per outcome level, so there is no single value
+  # to return, and the call warned and then failed with a second, unrelated
+  # message. Now every retired name fails the same way and points at both the
+  # replacement and `legacy = TRUE`, which is the one route that still yields
+  # the old spelling.
   for (old in names(map)) {
-    replacement <- map[[old]]
     got <- conditions_of(nsca_extract(fit, param = old))
-    expect_true(any(grepl("renamed", got$warnings)), info = old)
-    if (replacement %in% names(joint)) {
-      # A joint-table name is extractable; the value is the replacement's.
-      expect_true(is.na(got$error), info = old)
-      expect_equal(got$value, joint[[replacement]][[1L]], info = old)
-    } else {
-      # A dual-threshold name is defined per outcome level, so there is no one
-      # value to return. Warn about the rename, then say why, rather than
-      # calling a name we know about unknown.
-      expect_match(got$error, "nsca_thresholds|Unknown parameter", info = old)
-    }
+    expect_length(got$warnings, 0L)
+    expect_match(got$error, map[[old]], fixed = TRUE, info = old)
+    expect_match(got$error, "legacy = TRUE", fixed = TRUE, info = old)
   }
 })
 
@@ -104,7 +105,7 @@ test_that("the area identity closes, and its residual is reported", {
     expect_equal(row$reconstruction_error, abs(residual), tolerance = 1e-12,
                  info = as.character(seed))
     expect_lt(row$reconstruction_error, 0.01)
-    expect_equal(row$joint_empty_zone_coverage, 1 - row$admissible_region_share)
+    expect_equal(row$joint_empty_space_coverage, 1 - row$admissible_region_share)
   }
 })
 
@@ -136,13 +137,13 @@ test_that("the two bounds hold everywhere and are attained by the diagonal", {
     expect_lte(row$balanced_joint_effect, 1 + row$overlap_share + 1e-9)
     # Only the coverage is bounded unconditionally, which is the reason it is
     # worth reporting next to the other two.
-    expect_gte(row$joint_empty_zone_coverage, -1e-9)
-    expect_lte(row$joint_empty_zone_coverage, 1 + 1e-9)
+    expect_gte(row$joint_empty_space_coverage, -1e-9)
+    expect_lte(row$joint_empty_space_coverage, 1 + 1e-9)
   }
 })
 
 test_that("balance separates what balanced_joint_effect cannot", {
-  # The index penalises imbalance but does not measure it: (0.50, 0.125) and
+  # The index penalizes imbalance but does not measure it: (0.50, 0.125) and
   # (0.25, 0.25) both score 0.50. The balance column is the geometric mean
   # over the arithmetic one, which is 1 exactly when the components are equal.
   expect_equal(nsca_joint(0.50, 0.125), nsca_joint(0.25, 0.25))
@@ -166,6 +167,7 @@ test_that("balance separates what balanced_joint_effect cannot", {
 })
 
 test_that("support needs significance, relevance and geometry, separately", {
+  skip_on_cran()
   dat <- decision_data()
 
   # Significance alone, with no relevance threshold pre-specified.
@@ -206,7 +208,7 @@ test_that("a degenerate row can never be reported as supported", {
 
   # Every index is at its maximum, which is exactly why the flag matters.
   expect_gt(row$balanced_joint_effect, 0.99)
-  expect_gt(row$joint_empty_zone_coverage, 0.99)
+  expect_gt(row$joint_empty_space_coverage, 0.99)
   expect_true(row$degenerate)
   expect_false(row$geometry_acceptable)
   expect_false(isTRUE(row$joint_support))
@@ -220,7 +222,7 @@ test_that("without a test there is no decision, only a description", {
   expect_true(is.na(row$p_weakest_perm))
   expect_true(is.na(row$necessity_supported))
   expect_true(is.na(row$joint_support))
-  expect_identical(row$joint_support_status, "not tested")
+  expect_identical(row$significance_status, "not tested")
   # The description is still there, and geometry is still checkable.
   expect_true(is.finite(row$weakest_effect))
   expect_true(row$geometry_acceptable)
@@ -249,7 +251,7 @@ test_that("the joint table carries the framework vocabulary", {
                     "necessity_boundary", "sufficiency_empty_space",
                     "sufficiency_boundary", "component_sum",
                     "frontiers_crossed", "joint_support",
-                    "joint_support_status", "admissible_region_share") %in%
+                    "significance_status", "admissible_region_share") %in%
                     names(row)))
 
   # HH: necessity sits upper-left, so its boundary is a ceiling and the
@@ -324,24 +326,18 @@ test_that("the dual-threshold table uses the framework's status vocabulary", {
   }
 })
 
-test_that("the retired inequality argument still works", {
+test_that("the retired boundary argument is gone and inequality carries it", {
   fit <- nsca_analysis(decision_data(), "X", "Y", ceilings = "ce_fdh",
                        steps = 4)
+
+  # `boundary` was removed in 0.5.0. It had been a deprecated alias that warned
+  # and carried on; the policy now is that a retired name stops working. The
+  # argument it replaced still does its job.
+  expect_error(nsca_thresholds(fit, boundary = "inclusive"), "unused argument")
+
+  strict <- nsca_thresholds(fit, inequality = "strict")
   inclusive <- nsca_thresholds(fit, inequality = "inclusive")
-
-  got <- conditions_of(nsca_thresholds(fit, boundary = "inclusive"))
-  expect_length(got$warnings, 1L)
-  expect_true(is.na(got$error))
-  expect_equal(got$value$sufficiency_rule, inclusive$sufficiency_rule)
-  expect_equal(unique(got$value$inequality), "inclusive")
-
-  # Supplying both warns twice -- once for the deprecation, once for the
-  # conflict -- and keeps the new argument.
-  both <- conditions_of(
-    nsca_thresholds(fit, inequality = "strict", boundary = "inclusive")
-  )
-  expect_length(both$warnings, 2L)
-  expect_true(any(grepl("deprecated", both$warnings)))
-  expect_true(any(grepl("Both", both$warnings)))
-  expect_equal(unique(both$value$inequality), "strict")
+  expect_equal(unique(strict$inequality), "strict")
+  expect_equal(unique(inclusive$inequality), "inclusive")
+  expect_false(identical(strict$sufficiency_rule, inclusive$sufficiency_rule))
 })

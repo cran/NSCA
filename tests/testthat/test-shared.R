@@ -44,10 +44,12 @@ test_that("the shared sequence drives both engines and reports all four", {
 
   # The stored draws are the evidence behind those numbers.
   draws <- attr(fit, "nsca")$shared
-  expect_named(draws, c("necessity", "sufficiency", "weakest"))
+  expect_named(draws, c("necessity", "sufficiency", "weakest", "sum"))
   expect_equal(dim(draws$necessity), c(39L, 1L, 1L))
   expect_equal(draws$weakest[, 1L, 1L],
                pmin(draws$necessity[, 1L, 1L], draws$sufficiency[, 1L, 1L]))
+  expect_equal(draws$sum[, 1L, 1L],
+               draws$necessity[, 1L, 1L] + draws$sufficiency[, 1L, 1L])
 })
 
 test_that("a strong relation beats random pairing on the minimum", {
@@ -100,6 +102,7 @@ test_that("a recorded draw is exactly what that one shuffle produces", {
 })
 
 test_that("the seed reproduces the sequence and the caller's stream survives", {
+  skip_on_cran()
   dat <- shared_data()
   first <- nsca_table(nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh",
                                     shared.test.rep = 15, shared.seed = 7))
@@ -178,7 +181,7 @@ test_that("the shared sequence covers every condition and frontier", {
   # unrelated condition can reach by chance often enough to make a p-value
   # comparison flaky.
   weakest <- function(name) {
-    table$weakest_effect[table$condition == name & table$ceiling == "ce_fdh"]
+    table$weakest_effect[table$condition == name & table$frontier == "ce_fdh"]
   }
   expect_gt(weakest("X1"), weakest("X2"))
   expect_lt(weakest("X2"), 0.15)

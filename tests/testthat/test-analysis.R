@@ -76,7 +76,7 @@ test_that("a deterministic relation approaches the 0.5 ceiling", {
                         Y = seq(0, 1, length.out = n))
       table <- nsca_table(nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh"))
       expect_equal(table$admissible_region_share, 0, tolerance = 1e-6)
-      # The normalised index inherits exactly twice the same excess, which is
+      # The normalized index inherits exactly twice the same excess, which is
       # the point of leaving it unclamped: the discretization stays visible.
       expect_equal(table$balanced_joint_effect, 2 * table$weakest_effect, tolerance = 1e-4)
       table$weakest_effect - 0.5
@@ -101,29 +101,29 @@ test_that("a constant outcome is refused with an explanation", {
   # With a scope imposed it runs, but it warns, and the numbers are exactly as
   # scope-dependent as the error message warns.
   expect_warning(
-    centred_fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh",
+    centered_fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh",
                                  scope = c(0, 1, 0, 1)),
     "does not vary"
   )
-  centred <- nsca_table(centred_fit)
+  centered <- nsca_table(centered_fit)
   low <- data.frame(X = dat$X, Y = rep(0.02, 40))
   edged <- nsca_table(suppressWarnings(
     nsca_analysis(low, "X", "Y", ceilings = "ce_fdh", scope = c(0, 1, 0, 1))
   ))
-  expect_gt(centred$weakest_effect, edged$weakest_effect + 0.3)
+  expect_gt(centered$weakest_effect, edged$weakest_effect + 0.3)
 
-  # Both rows must carry the flag, and the centred one is the flattering case:
-  # a line with no information at the centre of the scope maxes out every
+  # Both rows must carry the flag, and the centered one is the flattering case:
+  # a line with no information at the center of the scope maxes out every
   # index at once. This is the reason the flag exists.
-  expect_true(centred$degenerate)
+  expect_true(centered$degenerate)
   expect_true(edged$degenerate)
-  expect_equal(centred$d_nec, 0.5, tolerance = 0.01)
-  expect_equal(centred$d_suf, 0.5, tolerance = 0.01)
-  expect_equal(centred$balanced_joint_effect, 1, tolerance = 0.02)
-  expect_equal(centred$joint_empty_zone_coverage, 1, tolerance = 0.01)
-  # Moving the same uninformative line off centre changes the answer, which is
+  expect_equal(centered$d_nec, 0.5, tolerance = 0.01)
+  expect_equal(centered$d_suf, 0.5, tolerance = 0.01)
+  expect_equal(centered$balanced_joint_effect, 1, tolerance = 0.02)
+  expect_equal(centered$joint_empty_space_coverage, 1, tolerance = 0.01)
+  # Moving the same uninformative line off center changes the answer, which is
   # the tell: nothing about the data moved.
-  expect_lt(edged$balanced_joint_effect, centred$balanced_joint_effect - 0.2)
+  expect_lt(edged$balanced_joint_effect, centered$balanced_joint_effect - 0.2)
 })
 
 test_that("a flat frontier over a filled scope is the opposite case", {
@@ -141,7 +141,7 @@ test_that("a flat frontier over a filled scope is the opposite case", {
   expect_lt(row$d_suf, 0.05)
   expect_lt(row$weakest_effect, 0.05)
   expect_lt(row$balanced_joint_effect, 0.10)
-  expect_lt(row$joint_empty_zone_coverage, 0.10)
+  expect_lt(row$joint_empty_space_coverage, 0.10)
   expect_gt(row$admissible_region_share, 0.90)
 })
 
@@ -169,10 +169,10 @@ test_that("one technique per row, applied to both sides", {
   fit <- nsca_analysis(dat, "X", "Y", ceilings = c("ce_fdh", "cr_fdh"))
   table <- nsca_table(fit)
   expect_equal(nrow(table), 2L)
-  expect_setequal(table$ceiling, c("ce_fdh", "cr_fdh"))
+  expect_setequal(table$frontier, c("ce_fdh", "cr_fdh"))
   # There is no way to ask for different techniques on the two sides: the
   # column is single-valued per row by construction.
-  expect_true(all(table$ceiling %in% c("ce_fdh", "cr_fdh")))
+  expect_true(all(table$frontier %in% c("ce_fdh", "cr_fdh")))
 })
 
 test_that("ols is refused because it is not an empty-space frontier", {
@@ -181,7 +181,7 @@ test_that("ols is refused because it is not an empty-space frontier", {
     fit <- nsca_analysis(dat, "X", "Y", ceilings = c("ols", "ce_fdh")),
     "central-tendency"
   )
-  expect_identical(nsca_table(fit)$ceiling, "ce_fdh")
+  expect_identical(nsca_table(fit)$frontier, "ce_fdh")
   # The same call warns before it stops, so both conditions must be caught.
   expect_warning(
     expect_error(nsca_analysis(dat, "X", "Y", ceilings = "ols"), "No usable"),
@@ -198,14 +198,14 @@ test_that("joint support needs both components to reject", {
     table$nsca_significant,
     table$necessity_significant && table$sufficiency_significant
   )
-  expect_true(table$joint_support_status %in%
+  expect_true(table$significance_status %in%
     c("supported", "necessity fails", "sufficiency fails", "neither component"))
-  if (table$joint_support_status == "supported") {
+  if (table$significance_status == "supported") {
     expect_true(table$p_nec <= 0.05 && table$p_suf <= 0.05)
   }
   # Without a test there can be no verdict.
   untested <- nsca_table(nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh"))
-  expect_identical(untested$joint_support_status, "not tested")
+  expect_identical(untested$significance_status, "not tested")
   expect_true(is.na(untested$p_nsca_iut))
   expect_true(is.na(untested$nsca_significant))
 })
@@ -229,7 +229,7 @@ test_that("all three analysis layers are reported explicitly", {
   )
   printed <- paste(capture.output(print(fit)), collapse = "\n")
   expect_match(printed, "1\\. Necessary Condition Analysis")
-  expect_match(printed, "2\\. Sufficiency Condition Analysis")
+  expect_match(printed, "2\\. Sufficient Condition Analysis")
   expect_match(
     printed,
     "3\\. Necessary and Sufficient Condition Analysis"

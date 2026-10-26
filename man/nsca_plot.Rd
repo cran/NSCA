@@ -17,9 +17,12 @@ nsca_plot(model, x = NULL, ceilings = NULL, shade = TRUE, annotate = TRUE)
 \item{ceilings}{Frontier techniques to draw. Defaults to all that were
 estimated.}
 
-\item{shade}{Shade the admissible region under the first technique.}
+\item{shade}{Whether to shade the admissible region under the first
+technique.}
 
-\item{annotate}{Label the two corners that the claim requires to be empty.}
+\item{annotate}{Whether to label the two corners that the claim requires to
+be empty. \code{FALSE} removes both labels, which may be preferable for small
+multiples or for a figure with its own caption.}
 
 \item{...}{Passed on to \code{nsca_plot()} by the \code{plot()} method.}
 }
@@ -29,14 +32,16 @@ A \code{ggplot} for one condition, or a named list of plots.
 \description{
 Draws the scatter plot with the necessity and sufficiency frontiers and
 shades the admissible region between them. Several frontier techniques may
-be drawn at once; unlike the computation, a chart compares nothing
-numerically, so mixing techniques here is safe and often informative.
+be drawn at once. Unlike the computation, a chart involves no numerical
+comparison, so combining techniques here is appropriate and may be
+informative.
 }
 \examples{
 set.seed(1)
 x <- sort(runif(60))
 dat <- data.frame(X = x, Y = pmin(pmax(x + rnorm(60, 0, 0.1), 0), 1))
-fit <- nsca_analysis(dat, "X", "Y", ceilings = "ce_fdh")
+fit <- nsca_analysis(dat, "X", "Y", ceilings = c("ce_fdh", "cr_fdh"),
+                     reference = "ols")
 nsca_plot(fit)
 plot(fit)
 }
